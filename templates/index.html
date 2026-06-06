@@ -1,171 +1,411 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPM Checkpoint Dashboard</title>
-    <link rel="stylesheet" href="/static/bootstrap.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .sidebar { background-color: #343a40; min-height: 100vh; color: white; padding-top: 20px; }
-        .sidebar a { color: #adb5bd; text-decoration: none; padding: 10px 20px; display: block; }
-        .sidebar a:hover, .sidebar a.active { background-color: #495057; color: white; }
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TPM Dashboard | Industrial Maintenance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcf8f9;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+        .sidebar-active {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
     </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#313031",
+                        "background": "#fcf8f9",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#c1c7ce",
+                        "surface-bright": "#fcf8f9",
+                        "on-background": "#1c1b1c",
+                        "on-surface-variant": "#44474a",
+                        "surface-container-low": "#f6f3f3",
+                        "surface-container-high": "#eae7e7",
+                        "tertiary-fixed": "#f3dfd2",
+                        "on-secondary-container": "#fefcff",
+                        "on-tertiary-fixed": "#231a12",
+                        "surface-container-highest": "#e5e2e2",
+                        "on-tertiary-container": "#b1a094",
+                        "inverse-primary": "#c1c7ce",
+                        "on-error": "#ffffff",
+                        "primary": "#1f252a",
+                        "on-surface": "#1c1b1c",
+                        "surface-tint": "#595f65",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "secondary": "#0058be",
+                        "surface": "#fcf8f9",
+                        "surface-variant": "#e5e2e2",
+                        "on-secondary-fixed-variant": "#004395",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#41474e",
+                        "surface-dim": "#dcd9d9",
+                        "on-primary-container": "#9ea4ab",
+                        "error": "#ba1a1a",
+                        "outline": "#75777b",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#343a40",
+                        "secondary-container": "#2170e4",
+                        "outline-variant": "#c5c6cb",
+                        "tertiary": "#2c221a",
+                        "tertiary-fixed-dim": "#d6c3b6",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#43372e",
+                        "on-primary-fixed": "#161c22",
+                        "on-tertiary-fixed-variant": "#51443b",
+                        "surface-container": "#f0eded",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#dde3eb",
+                        "on-secondary-fixed": "#001a42",
+                        "inverse-on-surface": "#f3f0f0",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "sidebar-width": "260px",
+                        "xl": "48px",
+                        "base": "4px",
+                        "lg": "24px",
+                        "gutter": "20px",
+                        "sm": "8px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "mono-data": ["JetBrains Mono"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "mono-data": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
 </head>
-<body>
-<div class="container-fluid">
-    <div class="row">
-        <nav class="col-md-2 d-none d-md-block sidebar">
-            <div class="sidebar-sticky">
-                <h5 class="px-3">TPM System</h5>
-                <ul class="nav flex-column mt-4">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/machine_report">Machine Reports</a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <main role="main" class="col-md-10 ml-sm-auto px-4 pt-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                <h1 class="h2">Dashboard Summary</h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <input type="date" id="dashboardDate" class="form-control" value="{{ today }}">
-                </div>
-            </div>
-
-            <div class="row" id="summaryCards">
-                <div class="col-md-3">
-                    <div class="card text-white bg-primary">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Checks</h5>
-                            <h2 id="totalChecks">-</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-success">
-                        <div class="card-body">
-                            <h5 class="card-title">Total OK</h5>
-                            <h2 id="totalOk">-</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-danger">
-                        <div class="card-body">
-                            <h5 class="card-title">Total NOK</h5>
-                            <h2 id="totalNok">-</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-white bg-info">
-                        <div class="card-body">
-                            <h5 class="card-title">Avg Time (s)</h5>
-                            <h2 id="avgTime">-</h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-4">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header">Machine Status Overview</div>
-                        <div class="card-body">
-                            <canvas id="machineChart" height="100"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">Recent Checkpoints</div>
-                        <div class="card-body p-0">
-                            <table class="table table-striped mb-0" id="recentTable">
-                                <thead>
-                                    <tr>
-                                        <th>Machine</th>
-                                        <th>CP#</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+<body class="bg-background text-on-background min-h-screen flex overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="bg-primary-container text-on-primary-container flex flex-col h-full py-lg px-md w-sidebar-width fixed left-0 top-0 z-50 border-r border-outline-variant shadow-md" id="sidebar">
+<!-- Brand Header -->
+<div class="mb-xl px-sm">
+<h1 class="font-headline-md text-headline-md font-black text-on-primary-container">TPM System</h1>
+<p class="font-label-md text-label-md opacity-70">Plant Alpha-01</p>
 </div>
 
-<script src="/static/bootstrap.bundle.min.js"></script>
-<script src="/static/chart.umd.js"></script>
-<script>
-let machineChart = null;
+    <!-- Navigation Links -->
+    <nav class="flex-1 space-y-sm">
+        <a class="bg-secondary text-on-secondary rounded-lg flex items-center gap-md p-md transition-transform active:scale-95 sidebar-active" href="/">
+            <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+            <span class="font-label-md text-label-md">Dashboard</span>
+        </a>
+        <a class="text-on-primary-container opacity-80 flex items-center gap-md p-md hover:bg-primary transition-all rounded-lg active:scale-95" href="/machine_report">
+            <span class="material-symbols-outlined" data-icon="description">description</span>
+            <span class="font-label-md text-label-md">Machine Reports</span>
+        </a>
+    </nav>
+    
+<!-- Footer Links -->
+<div class="mt-auto pt-lg space-y-sm border-t border-outline-variant/20">
+<a class="text-on-primary-container opacity-80 flex items-center gap-md p-md hover:bg-primary transition-all rounded-lg active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-md text-label-md">Help</span>
+</a>
+<a class="text-on-primary-container opacity-80 flex items-center gap-md p-md hover:bg-primary transition-all rounded-lg active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="flex-1 ml-sidebar-width h-screen overflow-y-auto relative">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-surface-bright flex justify-between items-center h-16 px-lg w-full sticky top-0 z-40 border-b border-outline-variant shadow-sm">
+<div class="flex items-center gap-md">
+<img src="/static/dana_logo.webp" class="h-8 object-contain" alt="Dana Logo">
 
-function loadDashboardData(date) {
-    fetch('/api/dashboard/summary?date=' + date)
-        .then(response => response.json())
-        .then(res => {
-            if (res.status === 'success') {
-                const data = res.data;
-                document.getElementById('totalChecks').innerText = data.summary.total;
-                document.getElementById('totalOk').innerText = data.summary.ok;
-                document.getElementById('totalNok').innerText = data.summary.nok;
-                document.getElementById('avgTime').innerText = data.summary.avg_time.toFixed(2);
-                updateChart(data.machines);
-                updateRecentTable(data.recent);
+</div>
+<span class="font-headline-md text-headline-md font-bold text-primary">TPM Dashboard</span>
+</div>
+<div class="flex items-center gap-lg">
+<div class="hidden md:flex items-center gap-md">
+
+    <div class="flex items-center gap-sm">
+        <label for="dashboardDate" class="font-label-md text-on-surface-variant">Date:</label>
+        <input type="date" id="dashboardDate" class="form-control px-2 py-1 border border-outline-variant rounded" value="{{ today }}">
+    </div>
+    
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-low p-sm rounded-full transition-colors" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-low p-sm rounded-full transition-colors" data-icon="settings">settings</button>
+</div>
+<div class="flex items-center gap-sm border-l border-outline-variant pl-lg">
+<div class="text-right hidden sm:block">
+<p class="font-label-md text-label-md text-primary">Alex Rivera</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Chief Engineer</p>
+</div>
+<img alt="User profile" class="w-9 h-9 rounded-full object-cover border-2 border-outline-variant" data-alt="A professional headshot of a middle-aged male engineer with a confident expression, wearing a clean white industrial collared shirt. The lighting is bright and even, set against a soft-focus background of a clean, modern industrial control room with blue and silver accents. The image maintains a high-end, corporate aesthetic suitable for a high-performance industrial management dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwmHdCh_L-9Ly1g_SvR9PCbrAhyv4hSGddIsu4JPse-4ga99OQVFqC0yQNjZynX7q987PzOYCohNG3DQ0Teufeg7ZxTWjiMFk6U6CDMsEn_7vWK6PWQC2jP6y2ylNMtb2H_P3JQpy5-y1RlOba6NR3zCbEYHj8DIZuMY_kowL_SPNTy475P3RpJZTDG8sKyeN3J4Rrd8AjetdBWZmLvyDTqMJUYpHuDus2QDRa37dZP8BZh7utiTm7gxw9MYoc3nDIGjOdk8DOYi3X"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-lg space-y-lg max-w-[1600px] mx-auto">
+<!-- Page Header -->
+<div class="flex items-end justify-between border-b border-outline-variant pb-md">
+<div>
+<h2 class="font-display-lg text-display-lg text-primary">Dashboard</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Real-time equipment monitoring and checkup metrics.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-md py-sm rounded-lg border border-outline-variant hover:bg-surface-container transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-body-md" data-icon="filter_list">filter_list</span>
+                        Filter
+                    </button>
+<button class="flex items-center gap-xs px-md py-sm rounded-lg bg-secondary text-on-secondary hover:opacity-90 transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-body-md" data-icon="add">add</span>
+                        New Report
+                    </button>
+</div>
+</div>
+<!-- Metric Cards Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Total Checks -->
+<div class="white-card p-lg rounded-xl shadow-sm border border-outline-variant bg-white flex flex-col gap-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" data-icon="checklist">checklist</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-2 h-8 bg-secondary rounded-full"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">Total Checks</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-display-lg text-display-lg text-primary font-black" id="totalChecks">-</span>
+<span class="font-mono-data text-mono-data text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                            +12%
+                        </span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-xs">Completed in the last 30 days</p>
+</div>
+<!-- OK Checks -->
+<div class="white-card p-lg rounded-xl shadow-sm border border-outline-variant bg-white flex flex-col gap-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" data-icon="check_circle">check_circle</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-2 h-8 bg-green-500 rounded-full"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">OK Checks</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-display-lg text-display-lg text-primary font-black" id="totalOk">-</span>
+<div class="px-sm py-xs bg-green-50 text-green-700 rounded-full font-label-md text-[10px] uppercase">Optimal</div>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-sm">
+<div class="bg-green-500 h-1.5 rounded-full" style="width: 96.7%"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant">96.7% Success Rate</p>
+</div>
+<!-- NOK Checks -->
+<div class="white-card p-lg rounded-xl shadow-sm border border-outline-variant bg-white flex flex-col gap-sm relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-lg opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px]" data-icon="report_problem">report_problem</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-2 h-8 bg-error rounded-full"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">NOK Checks</span>
+</div>
+<div class="flex items-baseline gap-sm">
+<span class="font-display-lg text-display-lg text-error font-black" id="totalNok">-</span>
+<div class="px-sm py-xs bg-error-container text-on-error-container rounded-full font-label-md text-[10px] uppercase">Critical</div>
+</div>
+<p class="text-[11px] text-on-error-container mt-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="warning">warning</span>
+                        Requires immediate attention
+                    </p>
+</div>
+</div>
+<!-- Chart Section -->
+<div class="white-card bg-white rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant flex items-center justify-between bg-surface-container-low/50">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="bar_chart">bar_chart</span>
+<h3 class="font-headline-md text-headline-md text-primary">Machine Performance Trends</h3>
+</div>
+<div class="flex gap-xs">
+<button class="px-sm py-xs text-[11px] bg-secondary text-on-secondary rounded font-bold">WEEKS</button>
+<button class="px-sm py-xs text-[11px] text-on-surface-variant hover:bg-surface-container rounded font-bold transition-colors">MONTHS</button>
+</div>
+</div>
+<div class="p-lg">
+
+    <!-- Modern Bar Chart Placeholder (SVG) -->
+    <div class="w-full h-[400px] relative p-4">
+        <canvas id="machineChart"></canvas>
+    </div>
+    
+</div>
+</div>
+<!-- Maintenance Schedule (Asymmetric Add-on) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg pb-xl">
+<div class="lg:col-span-2 white-card bg-white rounded-xl shadow-sm border border-outline-variant p-lg">
+<div class="flex items-center justify-between mb-lg">
+<h3 class="font-headline-md text-headline-md text-primary">Active Alerts</h3>
+<a class="text-secondary font-label-md text-label-md hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-sm">
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg border-l-4 border-error">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-error-container text-on-error-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="settings_suggest">settings_suggest</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-primary font-bold">Conveyor Belt B-04 Fault</p>
+<p class="text-[11px] text-on-surface-variant">Critical overheating detected in main motor assembly.</p>
+</div>
+</div>
+<span class="font-mono-data text-mono-data text-error">12m ago</span>
+</div>
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg border-l-4 border-yellow-500">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="oil_barrel">oil_barrel</span>
+</div>
+<div>
+<p class="font-body-md text-body-md text-primary font-bold">Hydraulic Pressure Warning</p>
+<p class="text-[11px] text-on-surface-variant">Pressure levels at 85% threshold on Unit G-12.</p>
+</div>
+</div>
+<span class="font-mono-data text-mono-data text-yellow-700">1h ago</span>
+</div>
+</div>
+</div>
+<div class="bg-primary-container text-on-primary-container rounded-xl shadow-md p-lg flex flex-col justify-between">
+<div>
+<h3 class="font-headline-md text-headline-md mb-xs">Plant Summary</h3>
+<p class="text-[12px] opacity-70 mb-lg">Daily production &amp; maintenance efficiency report.</p>
+<div class="space-y-md">
+<div class="flex justify-between items-center">
+<span class="text-[12px]">Availability</span>
+<span class="font-mono-data text-secondary-fixed">94.2%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-[12px]">Performance</span>
+<span class="font-mono-data text-secondary-fixed">88.7%</span>
+</div>
+<div class="flex justify-between items-center border-t border-outline-variant/30 pt-md">
+<span class="text-[12px] font-bold">OEE Score</span>
+<span class="font-display-lg text-[24px] text-on-secondary">83.5%</span>
+</div>
+</div>
+</div>
+<button class="mt-xl w-full py-md bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:bg-secondary-container transition-colors">
+                        Generate Daily PDF
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button (Optional contextual) -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-secondary text-on-secondary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+</button>
+
+    <script src="/static/chart.umd.js"></script>
+    <script>
+    let machineChart = null;
+    
+    function loadDashboardData(date) {
+        fetch('/api/dashboard/summary?date=' + date)
+            .then(response => response.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    const data = res.data;
+                    document.getElementById('totalChecks').innerText = data.summary.total;
+                    document.getElementById('totalOk').innerText = data.summary.ok;
+                    document.getElementById('totalNok').innerText = data.summary.nok;
+                    updateChart(data.machines);
+                    updateRecentTable(data.recent);
+                }
+            })
+            .catch(err => console.error('Dashboard fetch error:', err));
+    }
+    
+    function updateChart(machines) {
+        const ctx = document.getElementById('machineChart').getContext('2d');
+        const labels = machines.map(m => m.machine_id);
+        const okData = machines.map(m => m.total_ok);
+        const nokData = machines.map(m => m.total_nok);
+    
+        if (machineChart) machineChart.destroy();
+    
+        machineChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'OK', data: okData, backgroundColor: '#22c55e' },
+                    { label: 'NOK', data: nokData, backgroundColor: '#ef4444' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { stacked: true }, y: { stacked: true } }
             }
-        })
-        .catch(err => console.error('Dashboard fetch error:', err));
-}
-
-function updateChart(machines) {
-    const ctx = document.getElementById('machineChart').getContext('2d');
-    const labels = machines.map(m => m.machine_id);
-    const okData = machines.map(m => m.total_ok);
-    const nokData = machines.map(m => m.total_nok);
-
-    if (machineChart) machineChart.destroy();
-
-    machineChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                { label: 'OK', data: okData, backgroundColor: '#198754' },
-                { label: 'NOK', data: nokData, backgroundColor: '#dc3545' }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: { x: { stacked: true }, y: { stacked: true } }
-        }
-    });
-}
-
-function updateRecentTable(recent) {
-    const tbody = document.querySelector('#recentTable tbody');
-    tbody.innerHTML = '';
-    recent.forEach(r => {
-        const tr = document.createElement('tr');
-        const status = r.checkpoint_ok == 1
-            ? '<span class="badge bg-success">OK</span>'
-            : '<span class="badge bg-danger">NOK</span>';
-        tr.innerHTML = `<td>${r.machine_id}</td><td>${r.checkpoint_no}</td><td>${status}</td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-document.getElementById('dashboardDate').addEventListener('change', e => loadDashboardData(e.target.value));
-loadDashboardData(document.getElementById('dashboardDate').value);
-</script>
-</body>
-</html>
+        });
+    }
+    
+    function updateRecentTable(recent) {
+        const tbody = document.querySelector('#recentTable tbody');
+        tbody.innerHTML = '';
+        recent.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-outline-variant/30";
+            const status = r.checkpoint_ok == 1
+                ? '<span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">OK</span>'
+                : '<span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">NOK</span>';
+            tr.innerHTML = `<td class="p-2 font-body-md">${r.machine_id}</td><td class="p-2 font-mono-data">${r.checkpoint_no}</td><td class="p-2">${status}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    document.getElementById('dashboardDate').addEventListener('change', e => loadDashboardData(e.target.value));
+    loadDashboardData(document.getElementById('dashboardDate').value);
+    </script>
+    </body>
+    </html>

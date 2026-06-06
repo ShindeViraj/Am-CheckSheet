@@ -1,107 +1,313 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPM - Machine Reports</title>
-    <link rel="stylesheet" href="/static/bootstrap.min.css">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .sidebar { background-color: #343a40; min-height: 100vh; color: white; padding-top: 20px; }
-        .sidebar a { color: #adb5bd; text-decoration: none; padding: 10px 20px; display: block; }
-        .sidebar a:hover, .sidebar a.active { background-color: #495057; color: white; }
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Machine Reports | TPM Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .technical-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e5e7eb;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #d1d5db;
+        }
+        .sticky-header th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #ffffff;
+        }
     </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#fcf8f9",
+                      "primary-fixed-dim": "#c1c7ce",
+                      "on-tertiary": "#ffffff",
+                      "outline": "#75777b",
+                      "surface-variant": "#e5e2e2",
+                      "outline-variant": "#c5c6cb",
+                      "on-primary-fixed-variant": "#41474e",
+                      "inverse-on-surface": "#f3f0f0",
+                      "secondary": "#0058be",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f6f3f3",
+                      "on-primary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "tertiary": "#2c221a",
+                      "surface-container-highest": "#e5e2e2",
+                      "surface-container-high": "#eae7e7",
+                      "on-secondary-container": "#fefcff",
+                      "secondary-fixed-dim": "#adc6ff",
+                      "primary": "#1f252a",
+                      "on-background": "#1c1b1c",
+                      "surface-bright": "#fcf8f9",
+                      "primary-container": "#343a40",
+                      "tertiary-container": "#43372e",
+                      "on-surface": "#1c1b1c",
+                      "on-secondary-fixed": "#001a42",
+                      "inverse-primary": "#c1c7ce",
+                      "secondary-container": "#2170e4",
+                      "tertiary-fixed-dim": "#d6c3b6",
+                      "secondary-fixed": "#d8e2ff",
+                      "on-primary-fixed": "#161c22",
+                      "on-tertiary-container": "#b1a094",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed": "#f3dfd2",
+                      "surface": "#fcf8f9",
+                      "on-tertiary-fixed-variant": "#51443b",
+                      "on-tertiary-fixed": "#231a12",
+                      "on-secondary-fixed-variant": "#004395",
+                      "surface-tint": "#595f65",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#44474a",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#dde3eb",
+                      "on-primary-container": "#9ea4ab",
+                      "surface-dim": "#dcd9d9",
+                      "surface-container": "#f0eded",
+                      "inverse-surface": "#313031"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "8px",
+                      "xl": "12px",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "48px",
+                      "xs": "4px",
+                      "sm": "8px",
+                      "sidebar-width": "260px",
+                      "md": "16px",
+                      "base": "4px",
+                      "lg": "24px",
+                      "gutter": "20px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "mono-data": ["JetBrains Mono"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "mono-data": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
 </head>
-<body>
-<div class="container-fluid">
-    <div class="row">
-        <nav class="col-md-2 d-none d-md-block sidebar">
-            <div class="sidebar-sticky">
-                <h5 class="px-3">TPM System</h5>
-                <ul class="nav flex-column mt-4">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/machine_report">Machine Reports</a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <main role="main" class="col-md-10 ml-sm-auto px-4 pt-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-                <h1 class="h2">Machine Reports</h1>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-body">
-                    <form id="reportForm" class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">Select Machine</label>
-                            <select class="form-select" id="machineSelect">
-                                <option value="" disabled selected>-- Select Machine --</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Report Type</label>
-                            <select class="form-select" id="reportType" onchange="toggleReportType()">
-                                <option value="monthly">Monthly</option>
-                                <option value="custom">Custom Range</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2" id="monthDiv">
-                            <label class="form-label">Select Month</label>
-                            <input type="month" class="form-control" id="reportMonth" value="{{ today[:7] }}">
-                        </div>
-                        <div class="col-md-2" id="startDiv" style="display:none;">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="startDate" value="{{ week_ago }}">
-                        </div>
-                        <div class="col-md-2" id="endDiv" style="display:none;">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-control" id="endDate" value="{{ today }}">
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end gap-2">
-                            <button type="button" class="btn btn-primary" onclick="loadReport()">View Report</button>
-                            <button type="button" class="btn btn-success" onclick="downloadExcel()">Export Excel</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">Report Preview</div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" id="reportTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Shift</th>
-                                    <th>Machine</th>
-                                    <th>Total Checks</th>
-                                    <th>OK</th>
-                                    <th>NOK</th>
-                                    <th>Start Time</th>
-                                    <th>End Time</th>
-                                    <th>Time Taken (Mins)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr><td colspan="9" class="text-center">Select filters and click View Report</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+<body class="bg-background text-on-surface font-body-md overflow-hidden flex h-screen">
+<!-- SideNavBar (Authority: JSON & Design System) -->
+<aside class="flex flex-col h-full py-lg px-md w-sidebar-width bg-primary-container text-on-primary-container shadow-md border-r border-outline-variant z-50">
+<div class="mb-xl px-sm">
+<h1 class="font-headline-md text-headline-md font-black text-white tracking-tight">TPM System</h1>
+<p class="font-label-md text-label-md opacity-60 uppercase tracking-widest mt-xs">Industrial Hub</p>
 </div>
 
-<script src="/static/bootstrap.bundle.min.js"></script>
-<script>
+    <!-- Navigation Links -->
+    <nav class="flex-1 space-y-sm">
+        <a class="text-on-primary-container opacity-80 flex items-center gap-md p-md hover:bg-primary transition-all rounded-lg active:scale-95" href="/">
+            <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+            <span class="font-label-md text-label-md">Dashboard</span>
+        </a>
+        <a class="bg-secondary text-on-secondary rounded-lg flex items-center gap-md p-md transition-transform active:scale-95 sidebar-active" href="/machine_report">
+            <span class="material-symbols-outlined" data-icon="description">description</span>
+            <span class="font-label-md text-label-md">Machine Reports</span>
+        </a>
+    </nav>
+    
+<div class="pt-lg border-t border-white/10 space-y-sm">
+<a class="flex items-center gap-md px-md py-sm text-on-primary-container opacity-80 font-label-md text-label-md hover:bg-primary hover:opacity-100 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Help</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-primary-container opacity-80 font-label-md text-label-md hover:bg-primary hover:opacity-100 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+<!-- TopNavBar (Authority: JSON) -->
+<header class="flex justify-between items-center h-16 px-lg w-full sticky top-0 z-40 bg-surface-bright shadow-sm border-b border-outline-variant">
+<div class="flex items-center gap-md">
+<img src="/static/dana_logo.webp" class="h-8 object-contain" alt="Dana Logo">
+
+</div>
+<span class="font-headline-md text-headline-md font-bold text-primary">TPM Dashboard</span>
+</div>
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-sm">
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-sm rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="h-8 w-px bg-outline-variant"></div>
+</div>
+</header>
+<!-- Content Area -->
+<section class="flex-1 overflow-y-auto p-lg space-y-lg custom-scrollbar bg-[#f8f9fa]">
+<!-- Page Title -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Machine Reports</h2>
+<p class="text-on-surface-variant font-body-md mt-xs">Generate and analyze total productive maintenance data</p>
+</div>
+<div class="text-right">
+<span class="font-mono-data text-mono-data text-on-surface-variant">Last Update: 2023-10-27 14:32</span>
+</div>
+</div>
+<!-- Filter Form Card -->
+
+    <div class="bg-white rounded-lg p-lg shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-[#e9ecef]">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-lg">
+            <div class="space-y-xs">
+                <label class="font-label-md text-label-md text-on-surface-variant uppercase">Select Machine</label>
+                <select id="machineSelect" class="w-full bg-white border border-[#dee2e6] rounded-lg p-sm font-body-md focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all outline-none">
+                    <option value="" disabled selected>-- Select Machine --</option>
+                </select>
+            </div>
+            <div class="space-y-xs">
+                <label class="font-label-md text-label-md text-on-surface-variant uppercase">Report Type</label>
+                <select id="reportType" onchange="toggleReportType()" class="w-full bg-white border border-[#dee2e6] rounded-lg p-sm font-body-md focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all outline-none">
+                    <option value="monthly">Monthly Report</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+            <div class="space-y-xs" id="monthDiv">
+                <label class="font-label-md text-label-md text-on-surface-variant uppercase">Select Month</label>
+                <input id="reportMonth" type="month" class="w-full bg-white border border-[#dee2e6] rounded-lg p-sm font-body-md focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all outline-none" value="{{ today[:7] }}"/>
+            </div>
+            <div class="space-y-xs" id="startDiv" style="display:none;">
+                <label class="font-label-md text-label-md text-on-surface-variant uppercase">Start Date</label>
+                <input id="startDate" type="date" class="w-full bg-white border border-[#dee2e6] rounded-lg p-sm font-body-md focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all outline-none" value="{{ week_ago }}"/>
+            </div>
+            <div class="space-y-xs" id="endDiv" style="display:none;">
+                <label class="font-label-md text-label-md text-on-surface-variant uppercase">End Date</label>
+                <input id="endDate" type="date" class="w-full bg-white border border-[#dee2e6] rounded-lg p-sm font-body-md focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all outline-none" value="{{ today }}"/>
+            </div>
+        </div>
+        <div class="mt-lg pt-lg border-t border-outline-variant/30 flex justify-end gap-md">
+            <button onclick="downloadExcel()" class="px-lg py-sm border border-[#343a40] text-primary font-label-md text-label-md rounded-lg hover:bg-surface-container-low transition-all flex items-center gap-sm">
+                <span class="material-symbols-outlined text-[18px] text-green-600">table_view</span>
+                Export to Excel
+            </button>
+            <button onclick="loadReport()" class="px-lg py-sm bg-secondary text-white font-label-md text-label-md rounded-lg hover:opacity-90 transition-all flex items-center gap-sm shadow-sm active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+                View Preview
+            </button>
+        </div>
+    </div>
+    
+<div class="mt-lg pt-lg border-t border-outline-variant/30 flex justify-end gap-md">
+<button class="px-lg py-sm border border-[#343a40] text-primary font-label-md text-label-md rounded-lg hover:bg-surface-container-low transition-all flex items-center gap-sm">
+<span class="material-symbols-outlined text-[18px] text-green-600">table_view</span>
+                        Export to Excel
+                    </button>
+<button class="px-lg py-sm bg-secondary text-white font-label-md text-label-md rounded-lg hover:opacity-90 transition-all flex items-center gap-sm shadow-sm active:scale-95">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+                        View Preview
+                    </button>
+</div>
+</div>
+<!-- Report Preview Card -->
+<div class="bg-white rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-[#e9ecef] overflow-hidden flex flex-col h-[500px]">
+<div class="px-lg py-md border-b border-[#e9ecef] flex justify-between items-center bg-white/50 backdrop-blur-sm sticky top-0 z-20">
+<h3 class="font-headline-md text-headline-md text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary">analytics</span>
+                        Report Preview for <span class="text-secondary-container bg-secondary/5 px-sm rounded" id="previewMachineName">Abro Balancing</span>
+</h3>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs">
+<span class="w-3 h-3 rounded-full bg-green-500/20 border border-green-500"></span>
+<span class="text-[11px] font-label-md uppercase text-on-surface-variant">OK</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="w-3 h-3 rounded-full bg-red-500/20 border border-red-500"></span>
+<span class="text-[11px] font-label-md uppercase text-on-surface-variant">NOK</span>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar relative">
+
+    <table class="w-full text-left border-collapse" id="reportTable">
+        <thead class="sticky-header">
+            <tr class="bg-surface-container-low">
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">Date</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">Shift</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">Machine</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">Total Checks</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">OK</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">NOK</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">Start Time</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-r border-[#e9ecef]">End Time</th>
+                <th class="p-md font-label-md text-label-md text-on-surface-variant border-b border-[#e9ecef]">Time Taken (Mins)</th>
+            </tr>
+        </thead>
+        <tbody class="font-body-md divide-y divide-[#e9ecef]">
+            <tr><td colspan="9" class="text-center p-md text-on-surface-variant">Select filters and click View Preview</td></tr>
+        </tbody>
+    </table>
+    
+</div>
+<!-- Footer Info -->
+<div class="px-lg py-sm bg-surface-container border-t border-[#e9ecef] flex justify-between items-center">
+<p class="text-[11px] text-on-surface-variant font-label-md">Total Checkpoints: 24 | Compliance Rate: 95.8%</p>
+<div class="flex items-center gap-sm">
+<span class="text-[11px] text-on-surface-variant">Page 1 of 4</span>
+<div class="flex gap-xs">
+<button class="p-xs bg-white border border-outline-variant rounded hover:bg-surface-variant"><span class="material-symbols-outlined text-[16px]">chevron_left</span></button>
+<button class="p-xs bg-white border border-outline-variant rounded hover:bg-surface-variant"><span class="material-symbols-outlined text-[16px]">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+
+        <script>
+        
 // Load machines list on startup
 fetch('/api/reports/machines_list')
     .then(r => {
@@ -228,16 +434,17 @@ function loadReport() {
                     }
 
                     const tr = document.createElement('tr');
+tr.className = 'hover:bg-surface-container-lowest transition-colors';
                     tr.innerHTML = `
-                        <td>${data.date}</td>
-                        <td>${data.shift}</td>
-                        <td>${machine}</td>
-                        <td>${checks.length}</td>
-                        <td>${ok}</td>
-                        <td>${nok}</td>
-                        <td>${firstStart || '-'}</td>
-                        <td>${lastEnd || '-'}</td>
-                        <td>${totalMins}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${data.date}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${data.shift}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${machine}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${checks.length}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${ok}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${nok}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${firstStart || '-'}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${lastEnd || '-'}</td>
+                        <td class='p-md border-r border-[#e9ecef]'>${totalMins}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -262,6 +469,7 @@ function downloadExcel() {
 
     window.location.href = `/api/export/excel?machine_id=${encodeURIComponent(machine)}&start_date=${dates.startDate}&end_date=${dates.endDate}&report_type=${dates.reportType}`;
 }
-</script>
-</body>
-</html>
+
+        </script>
+        </body>
+        </html>
