@@ -78,7 +78,7 @@ def api_dashboard_summary():
                        SUM(checkpoint_not_ok) as total_nok,
                        AVG(time_taken) as avg_time
                 FROM checkpoints
-                WHERE DATE(start_time) >= %s AND DATE(start_time) <= %s
+                WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                 {machine_sql}
             """, tuple(params))
             summary = cur.fetchone()
@@ -86,7 +86,7 @@ def api_dashboard_summary():
             cur.execute(f"""
                 SELECT COUNT(*) as prev_total
                 FROM checkpoints
-                WHERE DATE(start_time) >= %s AND DATE(start_time) <= %s
+                WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                 {machine_sql}
             """, tuple(prev_params))
             prev_summary = cur.fetchone()
@@ -100,14 +100,14 @@ def api_dashboard_summary():
             if machine_id and period != 'day':
                 # Show trend over time for a specific machine
                 cur.execute(f"""
-                    SELECT DATE(start_time) as group_key,
+                    SELECT DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) as group_key,
                            SUM(checkpoint_ok) as total_ok,
                            SUM(checkpoint_not_ok) as total_nok
                     FROM checkpoints
-                    WHERE DATE(start_time) >= %s AND DATE(start_time) <= %s
+                    WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                       AND machine_id = %s
-                    GROUP BY DATE(start_time)
-                    ORDER BY DATE(start_time)
+                    GROUP BY DATE(DATE_SUB(start_time, INTERVAL 7 HOUR))
+                    ORDER BY DATE(DATE_SUB(start_time, INTERVAL 7 HOUR))
                 """, (start_date_str, end_date_str, machine_id))
             else:
                 cur.execute(f"""
@@ -115,7 +115,7 @@ def api_dashboard_summary():
                            SUM(checkpoint_ok) as total_ok,
                            SUM(checkpoint_not_ok) as total_nok
                     FROM checkpoints
-                    WHERE DATE(start_time) >= %s AND DATE(start_time) <= %s
+                    WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                     {machine_sql}
                     GROUP BY machine_id
                 """, tuple(params))
@@ -220,8 +220,8 @@ def api_machine_report():
             cur.execute("""
                 SELECT * FROM checkpoints
                 WHERE machine_id = %s
-                  AND DATE(start_time) >= %s
-                  AND DATE(start_time) <= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                 ORDER BY start_time ASC
             """, (machine_id, start_date, end_date))
             data = cur.fetchall()
@@ -280,8 +280,8 @@ def api_export_excel():
             cur.execute("""
                 SELECT * FROM checkpoints
                 WHERE machine_id = %s
-                  AND DATE(start_time) >= %s
-                  AND DATE(start_time) <= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                 ORDER BY start_time ASC
             """, (machine_id, start_date, end_date))
             rows = cur.fetchall()
