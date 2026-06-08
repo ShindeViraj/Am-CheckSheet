@@ -41,15 +41,16 @@ def api_dashboard_summary():
     except ValueError:
         return jsonify({'status': 'error', 'message': 'Invalid date format'}), 400
 
-    if period == 'week':
-        start_date = end_date - timedelta(days=6)
-    elif period == 'month':
-        start_date = end_date - timedelta(days=29)
-    else:
-        start_date = end_date
-        
-    start_date_str = start_date.strftime('%Y-%m-%d')
-    end_date_str = end_date.strftime('%Y-%m-%d')
+    try:
+        if period == 'week':
+            start_date = end_date - timedelta(days=6)
+        elif period == 'month':
+            start_date = end_date - timedelta(days=29)
+        else:
+            start_date = end_date
+            
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
         
         # Calculate prior period for trend
         if period == 'week':
