@@ -121,10 +121,10 @@ def api_dashboard_summary():
                 """, tuple(params))
             chart_data = cur.fetchall()
 
-            recent_params = []
-            recent_sql = ""
+            recent_params = [start_date_str, end_date_str]
+            recent_sql = "WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s"
             if machine_id:
-                recent_sql = "WHERE machine_id = %s"
+                recent_sql += " AND machine_id = %s"
                 recent_params.append(machine_id)
 
             cur.execute(f"""

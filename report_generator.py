@@ -12,10 +12,10 @@ with open(DATA_FILE, 'r', encoding='utf-8') as f:
 
 
 def find_template_data(machine_id):
-    """Fuzzy search for the machine ID in the JSON keys"""
+    """Exact case-insensitive search for the machine ID in the JSON keys"""
     machine_id = machine_id.strip().lower()
     for key, data in MACHINE_TEMPLATES.items():
-        if machine_id in key.lower():
+        if machine_id == key.lower().strip():
             return data
     return None
 
