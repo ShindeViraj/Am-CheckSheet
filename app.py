@@ -272,7 +272,7 @@ def api_export_excel():
     try:
         dt_start = datetime.strptime(start_date, '%Y-%m-%d')
         dt_end = datetime.strptime(end_date, '%Y-%m-%d')
-        if report_type == 'custom' and (dt_end - dt_start).days > 31:
+        if report_type == 'custom' and (dt_end - dt_start).days > 30:
             return jsonify({'status': 'error', 'message': 'Custom range cannot exceed 31 days'}), 400
 
         conn = get_db()

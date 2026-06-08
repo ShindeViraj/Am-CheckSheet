@@ -15,7 +15,7 @@ The application is designed to digitally track and display real-time machine equ
 ## Tech Stack
 
 - **Backend**: Python (Flask)
-- **Database**: SQLite / MySQL (configurable)
+- **Database**: MySQL
 - **Frontend**: HTML5, Vanilla JavaScript, Custom Premium CSS, TailwindCSS
 - **Data Visualizations**: Chart.js
 
@@ -40,4 +40,4 @@ The application is designed to digitally track and display real-time machine equ
    ```
 
 4. **View the Dashboard:**
-   Open your browser and navigate to `http://127.0.0.1:5000`
+   Open your browser and navigate to `http://127.0.0.1:8000`

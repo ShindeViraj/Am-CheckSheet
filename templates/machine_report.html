@@ -353,7 +353,7 @@ function getDates() {
         startDate = document.getElementById('startDate').value;
         endDate = document.getElementById('endDate').value;
         if (!startDate || !endDate) { alert("Please select start and end dates."); return null; }
-        if (new Date(endDate) - new Date(startDate) > 31 * 24 * 60 * 60 * 1000) {
+        if (new Date(endDate) - new Date(startDate) > 30 * 24 * 60 * 60 * 1000) {
             alert("Custom range cannot be more than 31 days.");
             return null;
         }
