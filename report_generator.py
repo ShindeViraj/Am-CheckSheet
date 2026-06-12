@@ -269,7 +269,7 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
             from datetime import timedelta
             return 2, (dt - timedelta(days=1)).date()
 
-    shift_times = {}   # (day_idx, shift) → {first, last}
+    shift_times = {}   # (day_idx, shift) → {first, last, ok, nok}
 
     for rec in checkpoints_data:
         cp_no  = rec['checkpoint_no']
@@ -299,7 +299,7 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
         # track shift timing
         key = (day_idx, shift)
         if key not in shift_times:
-            shift_times[key] = {'first': rec['start_time'], 'last': rec['end_time']}
+            shift_times[key] = {'first': rec['start_time'], 'last': rec['end_time'], 'ok': 0, 'nok': 0}
         else:
             if rec['start_time'] < shift_times[key]['first']:
                 shift_times[key]['first'] = rec['start_time']
@@ -307,13 +307,18 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
                                     or rec['end_time'] > shift_times[key]['last']):
                 shift_times[key]['last'] = rec['end_time']
 
+        if rec['checkpoint_ok']:
+            shift_times[key]['ok'] += 1
+        elif rec['checkpoint_not_ok']:
+            shift_times[key]['nok'] += 1
+
     # ── Summary section ─────────────────────────────────────────────────────
     # Blank row after data, then:
     # Shift A: 3 rows, blank row, Shift B: 3 rows (blue), blank row, Shift C: 3 rows
     summary_start = current_row + 1
-    labels = ['Checksheet Start', 'Checksheet End', 'Total Time (min)']
+    labels = ['Checksheet Start', 'Checksheet End', 'Total Time (min)', 'Total OK', 'Total NOK']
     shift_names_list = ['A', 'B', 'C']
-    shift_offsets = [0, 4, 8]  # row offset for each shift block
+    shift_offsets = [0, 6, 12]  # row offset for each shift block
 
     for s_idx, (shift_name, offset) in enumerate(zip(shift_names_list, shift_offsets)):
         is_b = (shift_name == 'B')
@@ -350,11 +355,11 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
             ws.row_dimensions[r].height = 16
 
     # Fill summary data – show HH:MM:SS for start/end
-    for (day_idx, shift), times in shift_times.items():
-        if times['first'] and times['last']:
-            start_str = times['first'].strftime('%H:%M:%S')
-            end_str   = times['last'].strftime('%H:%M:%S')
-            diff_mins = (times['last'] - times['first']).total_seconds() / 60.0
+    for (day_idx, shift), stats in shift_times.items():
+        if stats['first'] and stats['last']:
+            start_str = stats['first'].strftime('%H:%M:%S')
+            end_str   = stats['last'].strftime('%H:%M:%S')
+            diff_mins = (stats['last'] - stats['first']).total_seconds() / 60.0
 
             mc = _day_mark_col(day_idx)
             s_row = summary_start + shift_offsets[shift]
@@ -364,6 +369,8 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
             cell(s_row,     mc, start_str, font=FONT_14, fill=fill)
             cell(s_row + 1, mc, end_str,   font=FONT_14, fill=fill)
             cell(s_row + 2, mc, round(diff_mins, 1), font=FONT_14, fill=fill)
+            cell(s_row + 3, mc, stats['ok'], font=FONT_14, fill=fill)
+            cell(s_row + 4, mc, stats['nok'], font=FONT_14, fill=fill)
 
     # ── Freeze panes ────────────────────────────────────────────────────────
     ws.freeze_panes = 'F7'
