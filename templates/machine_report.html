@@ -165,10 +165,25 @@
 
     <!-- Navigation Links -->
     <nav class="flex-1 space-y-sm">
-        <a class="text-gray-400 flex items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-lg active:scale-95 font-medium" href="/">
-            <span class="material-symbols-outlined text-[28px]" data-icon="dashboard">dashboard</span>
-            <span class="font-body-lg text-body-lg">Dashboard</span>
-        </a>
+        <div>
+            <div class="flex rounded-lg">
+                <a class="text-gray-400 flex flex-1 items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-l-lg active:scale-95 font-medium" href="/">
+                    <span class="material-symbols-outlined text-[28px]" data-icon="dashboard">dashboard</span>
+                    <span class="font-body-lg text-body-lg">Dashboard</span>
+                </a>
+                <button type="button" id="dashboardMachineToggle" class="text-gray-400 w-12 rounded-r-lg border-l border-[#34344a] flex items-center justify-center hover:bg-[#2a2a40] hover:text-white transition-colors" aria-label="Show machine dashboards" aria-expanded="false" aria-controls="dashboardMachineMenu">
+                    <span class="material-symbols-outlined" id="dashboardMachineToggleIcon">add</span>
+                </button>
+            </div>
+            <div id="dashboardMachineMenu" class="hidden mt-2 max-h-72 overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
+                {% for machine_name in machine_names %}
+                <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="mx-2 my-1 flex items-center gap-2 rounded-md border border-[#3a3a50] bg-[#242438] px-3 py-2 text-sm font-medium text-gray-200 shadow-sm transition-all hover:border-secondary hover:bg-[#2f2f48] hover:text-white active:scale-[0.98]">
+                    <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
+                    <span>{{ machine_name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
         <a class="bg-secondary text-white shadow-lg rounded-lg flex items-center gap-md p-md transition-transform active:scale-95 sidebar-active font-semibold" href="/machine_report">
             <span class="material-symbols-outlined text-[28px]" data-icon="description">description</span>
             <span class="font-body-lg text-body-lg">Machine Reports</span>
@@ -304,6 +319,37 @@
 </main>
 
         <script>
+
+function initializeDashboardMachineMenu() {
+    const toggle = document.getElementById('dashboardMachineToggle');
+    const menu = document.getElementById('dashboardMachineMenu');
+    const icon = document.getElementById('dashboardMachineToggleIcon');
+
+    toggle.addEventListener('click', event => {
+        event.stopPropagation();
+        const isOpen = menu.classList.toggle('hidden') === false;
+        toggle.setAttribute('aria-expanded', String(isOpen));
+        icon.innerText = isOpen ? 'remove' : 'add';
+    });
+
+    document.addEventListener('click', event => {
+        if (!menu.contains(event.target) && !toggle.contains(event.target)) {
+            menu.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            icon.innerText = 'add';
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            menu.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            icon.innerText = 'add';
+        }
+    });
+}
+
+initializeDashboardMachineMenu();
         
 // Load machines list
 function loadMachinesList() {

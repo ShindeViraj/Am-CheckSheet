@@ -20,6 +20,11 @@ def find_template_data(machine_id):
     return None
 
 
+def get_machine_names():
+    """Return machine names in the order defined by machine_data.json."""
+    return list(MACHINE_TEMPLATES.keys())
+
+
 # ---------------------------------------------------------------------------
 # Column layout:
 #   A (1) : S.No.

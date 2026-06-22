@@ -3,7 +3,7 @@ import io
 import re
 from datetime import datetime, timedelta
 from collections import OrderedDict
-from report_generator import find_template_data
+from report_generator import find_template_data, get_machine_names
 
 from flask import Flask, render_template, request, jsonify, send_file
 from db import get_db
@@ -16,14 +16,28 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 @app.route('/')
 def dashboard():
-    return render_template('index.html', today=datetime.now().strftime('%Y-%m-%d'))
+    machine_names = get_machine_names()
+    selected_machine = request.args.get('machine_id', '')
+    if selected_machine not in machine_names:
+        selected_machine = ''
+    return render_template(
+        'index.html',
+        today=datetime.now().strftime('%Y-%m-%d'),
+        machine_names=machine_names,
+        selected_machine=selected_machine,
+    )
 
 
 @app.route('/machine_report')
 def machine_report():
     today = datetime.now().strftime('%Y-%m-%d')
     week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-    return render_template('machine_report.html', today=today, week_ago=week_ago)
+    return render_template(
+        'machine_report.html',
+        today=today,
+        week_ago=week_ago,
+        machine_names=get_machine_names(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -195,16 +209,7 @@ def api_dashboard_summary():
 
 @app.route('/api/reports/machines_list')
 def api_machines_list():
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            cur.execute("SELECT DISTINCT machine_id FROM checkpoints ORDER BY machine_id")
-            machines = [row['machine_id'] for row in cur.fetchall()]
-        conn.close()
-        return jsonify({'status': 'success', 'data': machines})
-    except Exception as e:
-        app.logger.error(str(e))
-        return jsonify({'status': 'error', 'message': 'An internal error occurred.'}), 500
+    return jsonify({'status': 'success', 'data': get_machine_names()})
 
 
 # ---------------------------------------------------------------------------

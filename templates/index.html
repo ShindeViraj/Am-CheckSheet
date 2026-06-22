@@ -152,10 +152,25 @@
 
     <!-- Navigation Links -->
     <nav class="flex-1 space-y-sm">
-        <a class="bg-secondary text-white shadow-lg rounded-lg flex items-center gap-md p-md transition-transform active:scale-95 sidebar-active font-semibold" href="/">
-            <span class="material-symbols-outlined text-[28px]" data-icon="dashboard">dashboard</span>
-            <span class="font-body-lg text-body-lg">Dashboard</span>
-        </a>
+        <div>
+            <div class="flex shadow-lg sidebar-active rounded-lg">
+                <a class="bg-secondary text-white rounded-l-lg flex flex-1 items-center gap-md p-md transition-transform active:scale-95 font-semibold" href="/">
+                    <span class="material-symbols-outlined text-[28px]" data-icon="dashboard">dashboard</span>
+                    <span class="font-body-lg text-body-lg">Dashboard</span>
+                </a>
+                <button type="button" id="dashboardMachineToggle" class="bg-secondary text-white w-12 rounded-r-lg border-l border-white/20 flex items-center justify-center hover:bg-secondary/90 transition-colors" aria-label="Show machine dashboards" aria-expanded="false" aria-controls="dashboardMachineMenu">
+                    <span class="material-symbols-outlined transition-transform" id="dashboardMachineToggleIcon">add</span>
+                </button>
+            </div>
+            <div id="dashboardMachineMenu" class="hidden mt-2 max-h-72 overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
+                {% for machine_name in machine_names %}
+                <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="mx-2 my-1 flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98] {{ 'border-secondary bg-secondary text-white' if machine_name == selected_machine else 'border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48] hover:text-white' }}">
+                    <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
+                    <span>{{ machine_name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
         <a class="text-gray-400 flex items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-lg active:scale-95 font-medium" href="/machine_report">
             <span class="material-symbols-outlined text-[28px]" data-icon="description">description</span>
             <span class="font-body-lg text-body-lg">Machine Reports</span>
@@ -190,14 +205,17 @@
 <!-- Page Header -->
 <div class="flex items-end justify-between border-b border-outline-variant pb-md">
 <div>
-<h2 class="font-display-lg text-display-lg text-primary">Dashboard</h2>
-<p class="font-body-md text-body-md text-on-surface-variant">Real-time equipment monitoring and checkup metrics.</p>
+<h2 class="font-display-lg text-display-lg text-primary" id="dashboardTitle">{{ selected_machine if selected_machine else 'All Machines' }} Dashboard</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">{{ 'Monitoring data for ' + selected_machine if selected_machine else 'Real-time monitoring and checkup metrics for all machines.' }}</p>
 </div>
 <div class="flex gap-sm">
 <div class="flex items-center gap-xs px-md py-sm rounded-lg border border-outline-variant hover:bg-surface-container transition-all font-label-md text-label-md bg-surface-bright">
 <span class="material-symbols-outlined text-body-md" data-icon="filter_list">filter_list</span>
 <select id="machineFilter" class="bg-transparent outline-none cursor-pointer text-primary">
 <option value="">All Machines</option>
+{% for machine_name in machine_names %}
+<option value="{{ machine_name }}" {{ 'selected' if machine_name == selected_machine else '' }}>{{ machine_name }}</option>
+{% endfor %}
 </select>
 </div>
 </div>
@@ -307,6 +325,37 @@ Requires immediate attention
     let machineChart = null;
     let currentPeriod = 'day';
 
+    function initializeDashboardMachineMenu() {
+        const toggle = document.getElementById('dashboardMachineToggle');
+        const menu = document.getElementById('dashboardMachineMenu');
+        const icon = document.getElementById('dashboardMachineToggleIcon');
+
+        toggle.addEventListener('click', event => {
+            event.stopPropagation();
+            const isOpen = menu.classList.toggle('hidden') === false;
+            toggle.setAttribute('aria-expanded', String(isOpen));
+            icon.innerText = isOpen ? 'remove' : 'add';
+        });
+
+        document.addEventListener('click', event => {
+            if (!menu.contains(event.target) && !toggle.contains(event.target)) {
+                menu.classList.add('hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+                icon.innerText = 'add';
+            }
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                menu.classList.add('hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+                icon.innerText = 'add';
+            }
+        });
+    }
+
+    initializeDashboardMachineMenu();
+
     function setPeriod(period) {
         currentPeriod = period;
         // Update button styles
@@ -349,7 +398,13 @@ Requires immediate attention
     // Auto-refresh machines list every 30 seconds
     setInterval(loadMachinesList, 30000);
 
-    document.getElementById('machineFilter').addEventListener('change', e => loadDashboardData(document.getElementById('dashboardDate').value));
+    document.getElementById('machineFilter').addEventListener('change', event => {
+        const machine = event.target.value;
+        document.getElementById('dashboardTitle').innerText = machine ? `${machine} Dashboard` : 'All Machines Dashboard';
+        const url = machine ? `/?machine_id=${encodeURIComponent(machine)}` : '/';
+        window.history.replaceState({}, '', url);
+        loadDashboardData(document.getElementById('dashboardDate').value);
+    });
 
     function loadDashboardData(date) {
         const machine = document.getElementById('machineFilter').value;
