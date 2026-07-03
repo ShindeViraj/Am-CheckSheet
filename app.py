@@ -32,10 +32,12 @@ def dashboard():
 def machine_report():
     today = datetime.now().strftime('%Y-%m-%d')
     week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
     return render_template(
         'machine_report.html',
         today=today,
         week_ago=week_ago,
+        now=now,
         machine_names=get_machine_names(),
     )
 
