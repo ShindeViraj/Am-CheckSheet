@@ -402,7 +402,10 @@ Requires immediate attention
         <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
             <div class="flex items-center gap-sm">
                 <span class="material-symbols-outlined text-error">report_problem</span>
-                <h3 class="font-headline-md text-[18px] font-semibold text-primary">Top Failing Checkpoints</h3>
+                <div>
+                    <h3 class="font-headline-md text-[18px] font-semibold text-primary">Top Failing Checkpoints</h3>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5" id="failureChartSubtitle">Loading...</p>
+                </div>
             </div>
             <span class="text-[11px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-full">Excl. 5S Cleaning</span>
         </div>
@@ -762,6 +765,12 @@ Requires immediate attention
         const subtitleEl = document.getElementById('shiftChartSubtitle');
         if (subtitleEl) {
             subtitleEl.textContent = machineName + (shiftStart && shiftEnd ? `  |  ${shiftStart} to ${shiftEnd}` : `  |  ${startMonth} to ${endMonth}`);
+        }
+        
+        // Update failure chart subtitle
+        const failureSubtitleEl = document.getElementById('failureChartSubtitle');
+        if (failureSubtitleEl) {
+            failureSubtitleEl.textContent = machineName + `  |  ${startMonth} to ${endMonth}`;
         }
 
         fetch(url)
