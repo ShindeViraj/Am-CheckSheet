@@ -332,7 +332,10 @@ Requires immediate attention
         <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
             <div class="flex items-center gap-sm">
                 <span class="material-symbols-outlined text-primary">schedule</span>
-                <h3 class="font-headline-md text-[18px] font-semibold text-primary">Shift-Wise Performance</h3>
+                <div>
+                    <h3 class="font-headline-md text-[18px] font-semibold text-primary">Shift-Wise Performance</h3>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5" id="shiftChartSubtitle">Loading...</p>
+                </div>
             </div>
         </div>
         <div class="p-lg">
@@ -709,6 +712,13 @@ Requires immediate attention
         let url = `/api/dashboard/analytics?start_month=${startMonth}&end_month=${endMonth}`;
         if (machine) url += `&machine_id=${encodeURIComponent(machine)}`;
 
+        // Update shift chart subtitle with context
+        const machineName = machine ? machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '') : 'All Machines';
+        const subtitleEl = document.getElementById('shiftChartSubtitle');
+        if (subtitleEl) {
+            subtitleEl.textContent = machineName + '  |  ' + startMonth + ' to ' + endMonth;
+        }
+
         fetch(url)
             .then(res => res.json())
             .then(res => {
@@ -761,8 +771,8 @@ Requires immediate attention
                     }
                 },
                 scales: {
-                    x: { stacked: true, grid: { display: false } },
-                    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
                 }
             }
         });
