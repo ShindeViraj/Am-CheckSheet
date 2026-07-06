@@ -175,6 +175,27 @@
             <span class="material-symbols-outlined text-[28px]" data-icon="description">description</span>
             <span class="font-body-lg text-body-lg">Machine Reports</span>
         </a>
+
+        <!-- Analytics Dropdown -->
+        <div>
+            <div class="flex rounded-lg">
+                <a class="text-gray-400 flex flex-1 items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-l-lg active:scale-95 font-medium" href="/#analyticsSection">
+                    <span class="material-symbols-outlined text-[28px]">analytics</span>
+                    <span class="font-body-lg text-body-lg">Analytics</span>
+                </a>
+                <button type="button" id="analyticsToggle" class="text-gray-400 w-10 rounded-r-lg flex items-center justify-center hover:bg-[#2a2a40] hover:text-white transition-colors" aria-label="Machine analytics" aria-expanded="false">
+                    <span class="material-symbols-outlined transition-transform" id="analyticsToggleIcon">add</span>
+                </button>
+            </div>
+            <div id="analyticsMenu" class="hidden mt-2 max-h-72 overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
+                {% for machine_name in machine_names %}
+                <a href="/?machine_id={{ machine_name }}#analyticsSection" class="mx-2 my-1 flex items-center gap-2 rounded-md border border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48] hover:text-white px-3 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98]">
+                    <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
+                    <span>{{ machine_name }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
     </nav>
     
 </aside>
@@ -300,6 +321,72 @@ Requires immediate attention
 </div>
 </div>
 
+<!-- Analytics Section -->
+<div id="analyticsSection" class="scroll-mt-24">
+
+<!-- Row: Shift-wise + Point-wise -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg mt-lg">
+
+    <!-- Shift-Wise Performance -->
+    <div class="premium-card overflow-hidden">
+        <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div class="flex items-center gap-sm">
+                <span class="material-symbols-outlined text-primary">schedule</span>
+                <h3 class="font-headline-md text-[18px] font-semibold text-primary">Shift-Wise Performance</h3>
+            </div>
+        </div>
+        <div class="p-lg">
+            <div class="w-full h-[320px] relative">
+                <canvas id="shiftChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Point-Wise Failure Analysis -->
+    <div class="premium-card overflow-hidden">
+        <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div class="flex items-center gap-sm">
+                <span class="material-symbols-outlined text-error">report_problem</span>
+                <h3 class="font-headline-md text-[18px] font-semibold text-primary">Top Failing Checkpoints</h3>
+            </div>
+            <span class="text-[11px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-full">Excl. 5S Cleaning</span>
+        </div>
+        <div class="p-lg">
+            <div class="w-full h-[320px] relative">
+                <canvas id="failureChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Month-Wise Trend (full width) -->
+<div class="premium-card overflow-hidden mt-lg">
+    <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div class="flex items-center gap-sm">
+            <span class="material-symbols-outlined text-primary">trending_up</span>
+            <h3 class="font-headline-md text-[18px] font-semibold text-primary">Month-Wise Trend</h3>
+        </div>
+        <div class="flex items-center gap-sm">
+            <label for="monthRange" class="font-label-md text-[11px] text-on-surface-variant">Range:</label>
+            <select id="monthRange" class="bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer shadow-sm">
+                <option value="1">1 Month</option>
+                <option value="2">2 Months</option>
+                <option value="3" selected>3 Months</option>
+                <option value="4">4 Months</option>
+                <option value="5">5 Months</option>
+                <option value="6">6 Months</option>
+            </select>
+        </div>
+    </div>
+    <div class="p-lg">
+        <div class="w-full h-[350px] relative">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+</div><!-- /analyticsSection -->
     <div class="grid grid-cols-1 gap-lg pb-xl mt-8">
         <div class="premium-card p-lg">
             <h3 class="font-headline-md text-headline-md text-primary mb-lg">Recent Checkpoints</h3>
@@ -324,6 +411,9 @@ Requires immediate attention
     <script>
     let machineChart = null;
     let currentPeriod = 'day';
+    let shiftChart = null;
+    let monthlyChart = null;
+    let failureChart = null;
 
     function initializeDashboardMachineMenu() {
         const toggle = document.getElementById('dashboardMachineToggle');
@@ -546,6 +636,200 @@ Requires immediate attention
     setInterval(() => {
         loadDashboardData(document.getElementById('dashboardDate').value);
     }, 15000);
+
+    // =====================================================================
+    // ANALYTICS SECTION
+    // =====================================================================
+
+    // Analytics sidebar toggle
+    (function initAnalyticsMenu() {
+        const toggle = document.getElementById('analyticsToggle');
+        const menu = document.getElementById('analyticsMenu');
+        const icon = document.getElementById('analyticsToggleIcon');
+        if (!toggle || !menu) return;
+
+        toggle.addEventListener('click', event => {
+            event.stopPropagation();
+            const isOpen = menu.classList.toggle('hidden') === false;
+            toggle.setAttribute('aria-expanded', String(isOpen));
+            icon.innerText = isOpen ? 'remove' : 'add';
+        });
+
+        document.addEventListener('click', event => {
+            if (!menu.contains(event.target) && !toggle.contains(event.target)) {
+                menu.classList.add('hidden');
+                toggle.setAttribute('aria-expanded', 'false');
+                icon.innerText = 'add';
+            }
+        });
+    })();
+
+    // Scroll to analytics if hash is present
+    if (window.location.hash === '#analyticsSection') {
+        setTimeout(() => {
+            document.getElementById('analyticsSection')?.scrollIntoView({ behavior: 'smooth' });
+        }, 600);
+    }
+
+    function loadAnalyticsData() {
+        const machine = document.getElementById('machineFilter').value;
+        const months = document.getElementById('monthRange').value;
+        let url = `/api/dashboard/analytics?months=${months}`;
+        if (machine) url += `&machine_id=${encodeURIComponent(machine)}`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    renderShiftChart(res.shift_data);
+                    renderMonthlyChart(res.monthly_data);
+                    renderFailureChart(res.failure_data);
+                }
+            })
+            .catch(err => console.error('Analytics fetch error:', err));
+    }
+
+    function renderShiftChart(data) {
+        const ctx = document.getElementById('shiftChart').getContext('2d');
+        if (shiftChart) shiftChart.destroy();
+
+        shiftChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => 'Shift ' + d.shift),
+                datasets: [
+                    {
+                        label: 'OK',
+                        data: data.map(d => d.ok),
+                        backgroundColor: 'rgba(34, 197, 94, 0.85)',
+                        borderRadius: 6,
+                        barPercentage: 0.6,
+                    },
+                    {
+                        label: 'NOK',
+                        data: data.map(d => d.nok),
+                        backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                        borderRadius: 6,
+                        barPercentage: 0.6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { family: 'Inter', size: 12 } } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+                }
+            }
+        });
+    }
+
+    function renderMonthlyChart(data) {
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        if (monthlyChart) monthlyChart.destroy();
+
+        monthlyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.month),
+                datasets: [
+                    {
+                        label: 'OK',
+                        data: data.map(d => d.ok),
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#22c55e',
+                    },
+                    {
+                        label: 'NOK',
+                        data: data.map(d => d.nok),
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#ef4444',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 16, font: { family: 'Inter', size: 12 } } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+                }
+            }
+        });
+    }
+
+    function renderFailureChart(data) {
+        const ctx = document.getElementById('failureChart').getContext('2d');
+        if (failureChart) failureChart.destroy();
+
+        // Build short labels like "MIG Welding - Check wire..."
+        const labels = data.map(d => {
+            const machineName = d.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
+            const cpShort = d.checkpoint.length > 35 ? d.checkpoint.substring(0, 35) + '…' : d.checkpoint;
+            return machineName + ' — ' + cpShort;
+        });
+
+        failureChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'NOK Count',
+                    data: data.map(d => d.nok_count),
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderRadius: 4,
+                    barPercentage: 0.7,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function(items) {
+                                const idx = items[0].dataIndex;
+                                return data[idx].machine + '\n' + data[idx].checkpoint;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, title: { display: true, text: 'Failure Count', font: { family: 'Inter', size: 11 } } },
+                    y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 }, autoSkip: false } }
+                }
+            }
+        });
+    }
+
+    // Load analytics when machine filter changes
+    document.getElementById('machineFilter').addEventListener('change', () => loadAnalyticsData());
+
+    // Load analytics when month range changes
+    document.getElementById('monthRange').addEventListener('change', () => loadAnalyticsData());
+
+    // Initial load
+    loadAnalyticsData();
+
+    // Auto-refresh analytics every 30 seconds
+    setInterval(loadAnalyticsData, 30000);
     </script>
     </body>
     </html>

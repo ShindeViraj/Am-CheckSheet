@@ -206,6 +206,162 @@ def api_dashboard_summary():
 
 
 # ---------------------------------------------------------------------------
+# Build 5S exclusion list – last checkpoint per machine (SQM = "5S")
+# ---------------------------------------------------------------------------
+import json as _json
+
+_DATA_FILE = os.path.join(os.path.dirname(__file__), 'storage', 'machine_data.json')
+with open(_DATA_FILE, 'r', encoding='utf-8') as _f:
+    _MACHINE_TEMPLATES = _json.load(_f)
+
+FIVE_S_EXCLUSIONS = []   # list of (machine_id, checkpoint_no) tuples to exclude
+for _key, _data in _MACHINE_TEMPLATES.items():
+    cps = _data.get('checkpoints', [])
+    if cps:
+        last_cp = cps[-1]
+        if last_cp.get('sqm', '').upper() == '5S':
+            FIVE_S_EXCLUSIONS.append((_key, str(last_cp['s_no'])))
+
+
+# ---------------------------------------------------------------------------
+# API – Dashboard Analytics (Shift / Month / Point‑wise)
+# ---------------------------------------------------------------------------
+
+@app.route('/api/dashboard/analytics')
+def api_dashboard_analytics():
+    machine_id = request.args.get('machine_id', '')
+    months = request.args.get('months', '3')
+
+    try:
+        months = max(1, min(6, int(months)))
+    except ValueError:
+        months = 3
+
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            machine_sql = ""
+            machine_params = []
+            if machine_id:
+                machine_sql = " AND machine_id = %s"
+                machine_params = [machine_id]
+
+            # -----------------------------------------------------------
+            # 1. Shift-wise OK / NOK
+            # -----------------------------------------------------------
+            cur.execute(f"""
+                SELECT
+                    CASE
+                        WHEN TIME(start_time) >= '07:00:00' AND TIME(start_time) < '15:30:00' THEN 'A'
+                        WHEN TIME(start_time) >= '15:30:00' THEN 'B'
+                        ELSE 'C'
+                    END as shift,
+                    SUM(checkpoint_ok) as ok,
+                    SUM(checkpoint_not_ok) as nok
+                FROM checkpoints
+                WHERE 1=1 {machine_sql}
+                GROUP BY shift
+                ORDER BY FIELD(shift, 'A', 'B', 'C')
+            """, tuple(machine_params))
+            shift_rows = cur.fetchall()
+
+            # Ensure all 3 shifts are present
+            shift_map = {r['shift']: r for r in shift_rows}
+            shift_data = []
+            for s in ['A', 'B', 'C']:
+                row = shift_map.get(s, {'shift': s, 'ok': 0, 'nok': 0})
+                shift_data.append({
+                    'shift': s,
+                    'ok': int(row['ok'] or 0),
+                    'nok': int(row['nok'] or 0),
+                })
+
+            # -----------------------------------------------------------
+            # 2. Month-wise OK / NOK (last N months)
+            # -----------------------------------------------------------
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=months * 30)
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = end_date.strftime('%Y-%m-%d')
+
+            cur.execute(f"""
+                SELECT
+                    DATE_FORMAT(DATE_SUB(start_time, INTERVAL 7 HOUR), '%%Y-%%m') as month,
+                    SUM(checkpoint_ok) as ok,
+                    SUM(checkpoint_not_ok) as nok
+                FROM checkpoints
+                WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
+                  {machine_sql}
+                GROUP BY month
+                ORDER BY month
+            """, tuple([start_str, end_str] + machine_params))
+            monthly_data = []
+            for r in cur.fetchall():
+                monthly_data.append({
+                    'month': r['month'],
+                    'ok': int(r['ok'] or 0),
+                    'nok': int(r['nok'] or 0),
+                })
+
+            # -----------------------------------------------------------
+            # 3. Point-wise failure ranking (exclude 5S last checkpoint)
+            # -----------------------------------------------------------
+            # Build exclusion WHERE clause
+            exclusion_sql = ""
+            exclusion_params = []
+            if FIVE_S_EXCLUSIONS:
+                clauses = []
+                for m_id, cp_no in FIVE_S_EXCLUSIONS:
+                    clauses.append("(machine_id = %s AND checkpoint_no = %s)")
+                    exclusion_params.extend([m_id, cp_no])
+                exclusion_sql = " AND NOT (" + " OR ".join(clauses) + ")"
+
+            cur.execute(f"""
+                SELECT machine_id, checkpoint_no,
+                       SUM(checkpoint_not_ok) as nok_count
+                FROM checkpoints
+                WHERE checkpoint_not_ok = 1
+                  {machine_sql}
+                  {exclusion_sql}
+                GROUP BY machine_id, checkpoint_no
+                ORDER BY nok_count DESC
+                LIMIT 10
+            """, tuple(machine_params + exclusion_params))
+            failure_rows = cur.fetchall()
+
+            # Map checkpoint descriptions from JSON
+            failure_data = []
+            for r in failure_rows:
+                tpl = find_template_data(r['machine_id'])
+                cp_desc = f"Checkpoint #{r['checkpoint_no']}"
+                if tpl and 'checkpoints' in tpl:
+                    for cp in tpl['checkpoints']:
+                        if str(cp.get('s_no')) == str(r['checkpoint_no']):
+                            raw = cp.get('check_point', cp_desc)
+                            # Take only the first line for a short label
+                            cp_desc = raw.split('\n')[0].strip()
+                            break
+                failure_data.append({
+                    'machine': r['machine_id'],
+                    'checkpoint': cp_desc,
+                    'nok_count': int(r['nok_count'] or 0),
+                })
+
+        conn.close()
+
+        return jsonify({
+            'status': 'success',
+            'shift_data': shift_data,
+            'monthly_data': monthly_data,
+            'failure_data': failure_data,
+        })
+    except Exception as e:
+        app.logger.error(str(e))
+        return jsonify({'status': 'error', 'message': 'An internal error occurred.'}), 500
+
+
+# ---------------------------------------------------------------------------
 # API – Machines list
 # ---------------------------------------------------------------------------
 
