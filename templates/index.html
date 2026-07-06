@@ -179,7 +179,7 @@
         <!-- Analytics Dropdown -->
         <div>
             <div class="flex rounded-lg">
-                <a class="text-gray-400 flex flex-1 items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-l-lg active:scale-95 font-medium" href="/#analyticsSection">
+                <a class="text-gray-400 flex flex-1 items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-l-lg active:scale-95 font-medium cursor-pointer" onclick="document.getElementById('analyticsSection').scrollIntoView({behavior:'smooth'})">
                     <span class="material-symbols-outlined text-[28px]">analytics</span>
                     <span class="font-body-lg text-body-lg">Analytics</span>
                 </a>
@@ -189,10 +189,10 @@
             </div>
             <div id="analyticsMenu" class="hidden mt-2 max-h-72 overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
                 {% for machine_name in machine_names %}
-                <a href="/?machine_id={{ machine_name }}#analyticsSection" class="mx-2 my-1 flex items-center gap-2 rounded-md border border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48] hover:text-white px-3 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98]">
+                <button type="button" onclick="selectMachineAnalytics('{{ machine_name }}')" class="w-full mx-2 my-1 flex items-center gap-2 rounded-md border border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48] hover:text-white px-3 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98]" style="max-width:calc(100% - 16px)">
                     <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
-                    <span>{{ machine_name }}</span>
-                </a>
+                    <span class="truncate">{{ machine_name }}</span>
+                </button>
                 {% endfor %}
             </div>
         </div>
@@ -367,16 +367,15 @@ Requires immediate attention
             <span class="material-symbols-outlined text-primary">trending_up</span>
             <h3 class="font-headline-md text-[18px] font-semibold text-primary">Month-Wise Trend</h3>
         </div>
-        <div class="flex items-center gap-sm">
-            <label for="monthRange" class="font-label-md text-[11px] text-on-surface-variant">Range:</label>
-            <select id="monthRange" class="bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer shadow-sm">
-                <option value="1">1 Month</option>
-                <option value="2">2 Months</option>
-                <option value="3" selected>3 Months</option>
-                <option value="4">4 Months</option>
-                <option value="5">5 Months</option>
-                <option value="6">6 Months</option>
-            </select>
+        <div class="flex items-center gap-md">
+            <div class="flex items-center gap-xs">
+                <label for="analyticsStartMonth" class="font-label-md text-[11px] text-on-surface-variant">From:</label>
+                <input type="month" id="analyticsStartMonth" class="bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer shadow-sm">
+            </div>
+            <div class="flex items-center gap-xs">
+                <label for="analyticsEndMonth" class="font-label-md text-[11px] text-on-surface-variant">To:</label>
+                <input type="month" id="analyticsEndMonth" class="bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer shadow-sm">
+            </div>
         </div>
     </div>
     <div class="p-lg">
@@ -641,6 +640,21 @@ Requires immediate attention
     // ANALYTICS SECTION
     // =====================================================================
 
+    // Set default month range (3 months back to current month)
+    (function setDefaultMonthRange() {
+        const now = new Date();
+        const endMonth = now.toISOString().slice(0, 7); // YYYY-MM
+        const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const startMonth = startDate.toISOString().slice(0, 7);
+        document.getElementById('analyticsStartMonth').value = startMonth;
+        document.getElementById('analyticsEndMonth').value = endMonth;
+
+        // Set max to 6 months before current month for start
+        const maxStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        document.getElementById('analyticsStartMonth').min = maxStart.toISOString().slice(0, 7);
+        document.getElementById('analyticsEndMonth').max = endMonth;
+    })();
+
     // Analytics sidebar toggle
     (function initAnalyticsMenu() {
         const toggle = document.getElementById('analyticsToggle');
@@ -664,6 +678,23 @@ Requires immediate attention
         });
     })();
 
+    // Select machine from sidebar analytics dropdown → set filter, scroll, reload
+    function selectMachineAnalytics(machineName) {
+        const sel = document.getElementById('machineFilter');
+        sel.value = machineName;
+        sel.dispatchEvent(new Event('change'));
+        document.getElementById('dashboardTitle').innerText = machineName + ' Dashboard';
+        const url = `/?machine_id=${encodeURIComponent(machineName)}`;
+        window.history.replaceState({}, '', url);
+        // Close the menu
+        document.getElementById('analyticsMenu').classList.add('hidden');
+        document.getElementById('analyticsToggleIcon').innerText = 'add';
+        // Scroll to analytics
+        setTimeout(() => {
+            document.getElementById('analyticsSection').scrollIntoView({ behavior: 'smooth' });
+        }, 200);
+    }
+
     // Scroll to analytics if hash is present
     if (window.location.hash === '#analyticsSection') {
         setTimeout(() => {
@@ -673,8 +704,9 @@ Requires immediate attention
 
     function loadAnalyticsData() {
         const machine = document.getElementById('machineFilter').value;
-        const months = document.getElementById('monthRange').value;
-        let url = `/api/dashboard/analytics?months=${months}`;
+        const startMonth = document.getElementById('analyticsStartMonth').value;
+        const endMonth = document.getElementById('analyticsEndMonth').value;
+        let url = `/api/dashboard/analytics?start_month=${startMonth}&end_month=${endMonth}`;
         if (machine) url += `&machine_id=${encodeURIComponent(machine)}`;
 
         fetch(url)
@@ -703,14 +735,14 @@ Requires immediate attention
                         data: data.map(d => d.ok),
                         backgroundColor: 'rgba(34, 197, 94, 0.85)',
                         borderRadius: 6,
-                        barPercentage: 0.6,
+                        barPercentage: 0.5,
                     },
                     {
                         label: 'NOK',
                         data: data.map(d => d.nok),
                         backgroundColor: 'rgba(239, 68, 68, 0.85)',
                         borderRadius: 6,
-                        barPercentage: 0.6,
+                        barPercentage: 0.5,
                     }
                 ]
             },
@@ -718,11 +750,19 @@ Requires immediate attention
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { family: 'Inter', size: 12 } } }
+                    legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { family: 'Inter', size: 12 } } },
+                    tooltip: {
+                        callbacks: {
+                            afterBody: function(items) {
+                                const idx = items[0].dataIndex;
+                                return 'Total: ' + data[idx].total + '  |  NOK Rate: ' + data[idx].nok_rate + '%';
+                            }
+                        }
+                    }
                 },
                 scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    x: { stacked: true, grid: { display: false } },
+                    y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
                 }
             }
         });
@@ -777,7 +817,7 @@ Requires immediate attention
         const ctx = document.getElementById('failureChart').getContext('2d');
         if (failureChart) failureChart.destroy();
 
-        // Build short labels like "MIG Welding - Check wire..."
+        // Build short labels like "MIG Welding — Check wire..."
         const labels = data.map(d => {
             const machineName = d.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
             const cpShort = d.checkpoint.length > 35 ? d.checkpoint.substring(0, 35) + '…' : d.checkpoint;
@@ -823,7 +863,8 @@ Requires immediate attention
     document.getElementById('machineFilter').addEventListener('change', () => loadAnalyticsData());
 
     // Load analytics when month range changes
-    document.getElementById('monthRange').addEventListener('change', () => loadAnalyticsData());
+    document.getElementById('analyticsStartMonth').addEventListener('change', () => loadAnalyticsData());
+    document.getElementById('analyticsEndMonth').addEventListener('change', () => loadAnalyticsData());
 
     // Initial load
     loadAnalyticsData();

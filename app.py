@@ -230,12 +230,31 @@ for _key, _data in _MACHINE_TEMPLATES.items():
 @app.route('/api/dashboard/analytics')
 def api_dashboard_analytics():
     machine_id = request.args.get('machine_id', '')
-    months = request.args.get('months', '3')
+    # Accept start_month and end_month in YYYY-MM format
+    now = datetime.now()
+    default_end = now.strftime('%Y-%m')
+    default_start = (now - timedelta(days=90)).strftime('%Y-%m')
+    start_month = request.args.get('start_month', default_start)
+    end_month = request.args.get('end_month', default_end)
 
+    # Validate format
     try:
-        months = max(1, min(6, int(months)))
+        sm = datetime.strptime(start_month, '%Y-%m')
+        em = datetime.strptime(end_month, '%Y-%m')
+        if sm > em:
+            sm, em = em, sm
+            start_month, end_month = end_month, start_month
     except ValueError:
-        months = 3
+        start_month = default_start
+        end_month = default_end
+
+    # Build date range strings for SQL
+    start_date_str = start_month + '-01'
+    # End of end_month
+    em_parsed = datetime.strptime(end_month, '%Y-%m')
+    import calendar as _cal
+    last_day = _cal.monthrange(em_parsed.year, em_parsed.month)[1]
+    end_date_str = f"{end_month}-{last_day:02d}"
 
     try:
         conn = get_db()
@@ -247,7 +266,7 @@ def api_dashboard_analytics():
                 machine_params = [machine_id]
 
             # -----------------------------------------------------------
-            # 1. Shift-wise OK / NOK
+            # 1. Shift-wise OK / NOK  (with NOK rate for clarity)
             # -----------------------------------------------------------
             cur.execute(f"""
                 SELECT
@@ -257,33 +276,37 @@ def api_dashboard_analytics():
                         ELSE 'C'
                     END as shift,
                     SUM(checkpoint_ok) as ok,
-                    SUM(checkpoint_not_ok) as nok
+                    SUM(checkpoint_not_ok) as nok,
+                    COUNT(*) as total
                 FROM checkpoints
-                WHERE 1=1 {machine_sql}
+                WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
+                  {machine_sql}
                 GROUP BY shift
                 ORDER BY FIELD(shift, 'A', 'B', 'C')
-            """, tuple(machine_params))
+            """, tuple([start_date_str, end_date_str] + machine_params))
             shift_rows = cur.fetchall()
 
-            # Ensure all 3 shifts are present
+            # Ensure all 3 shifts are present with NOK rate
             shift_map = {r['shift']: r for r in shift_rows}
             shift_data = []
             for s in ['A', 'B', 'C']:
-                row = shift_map.get(s, {'shift': s, 'ok': 0, 'nok': 0})
+                row = shift_map.get(s, {'shift': s, 'ok': 0, 'nok': 0, 'total': 0})
+                total = int(row['total'] or 0)
+                ok = int(row['ok'] or 0)
+                nok = int(row['nok'] or 0)
+                nok_rate = round((nok / total) * 100, 1) if total > 0 else 0
                 shift_data.append({
                     'shift': s,
-                    'ok': int(row['ok'] or 0),
-                    'nok': int(row['nok'] or 0),
+                    'ok': ok,
+                    'nok': nok,
+                    'total': total,
+                    'nok_rate': nok_rate,
                 })
 
             # -----------------------------------------------------------
-            # 2. Month-wise OK / NOK (last N months)
+            # 2. Month-wise OK / NOK
             # -----------------------------------------------------------
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=months * 30)
-            start_str = start_date.strftime('%Y-%m-%d')
-            end_str = end_date.strftime('%Y-%m-%d')
-
             cur.execute(f"""
                 SELECT
                     DATE_FORMAT(DATE_SUB(start_time, INTERVAL 7 HOUR), '%%Y-%%m') as month,
@@ -295,7 +318,7 @@ def api_dashboard_analytics():
                   {machine_sql}
                 GROUP BY month
                 ORDER BY month
-            """, tuple([start_str, end_str] + machine_params))
+            """, tuple([start_date_str, end_date_str] + machine_params))
             monthly_data = []
             for r in cur.fetchall():
                 monthly_data.append({
