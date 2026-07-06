@@ -398,6 +398,41 @@ def api_dashboard_analytics():
 
 
 # ---------------------------------------------------------------------------
+# DEBUG – compare DB machine_ids vs JSON keys  (TEMPORARY – remove later)
+# ---------------------------------------------------------------------------
+
+@app.route('/api/debug/machine_ids')
+def api_debug_machine_ids():
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT DISTINCT machine_id FROM checkpoints ORDER BY machine_id")
+            db_ids = [r['machine_id'] for r in cur.fetchall()]
+        conn.close()
+
+        json_keys = list(_MACHINE_TEMPLATES.keys())
+
+        # Show which DB ids match and which don't
+        matches = []
+        mismatches = []
+        for db_id in db_ids:
+            tpl = find_template_data(db_id)
+            if tpl:
+                matches.append(db_id)
+            else:
+                mismatches.append(db_id)
+
+        return jsonify({
+            'db_machine_ids': db_ids,
+            'json_keys': json_keys,
+            'matched': matches,
+            'unmatched': mismatches,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
 # API – Machines list
 # ---------------------------------------------------------------------------
 

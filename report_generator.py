@@ -11,25 +11,27 @@ with open(DATA_FILE, 'r', encoding='utf-8') as f:
     MACHINE_TEMPLATES = json.load(f)
 
 
-import re
+def _normalize_key(s):
+    """Normalize a machine key for fuzzy matching: lowercase, collapse whitespace, strip."""
+    import re
+    return re.sub(r'\s+', ' ', s.strip().lower())
+
 
 def find_template_data(machine_id):
-    """Search for the machine ID in the JSON keys, gracefully handling trailing '(2)'."""
-    machine_id = machine_id.strip().lower()
-    # 1. Exact match
+    """Case-insensitive search for the machine ID in the JSON keys.
+    
+    Tries exact match first, then falls back to normalised-whitespace match.
+    """
+    machine_id_lower = machine_id.strip().lower()
+    # Pass 1: exact (case-insensitive) match
     for key, data in MACHINE_TEMPLATES.items():
-        if machine_id == key.lower().strip():
+        if machine_id_lower == key.lower().strip():
             return data
-            
-    # 2. Normalize match (remove trailing (n))
-    def normalize(name):
-        return re.sub(r'\s*\(\d+\)\s*$', '', name).strip()
-        
-    norm_id = normalize(machine_id)
+    # Pass 2: normalised whitespace match (handles extra/missing spaces)
+    machine_id_norm = _normalize_key(machine_id)
     for key, data in MACHINE_TEMPLATES.items():
-        if norm_id == normalize(key.lower()):
+        if machine_id_norm == _normalize_key(key):
             return data
-            
     return None
 
 
