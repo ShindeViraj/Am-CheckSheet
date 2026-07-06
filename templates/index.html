@@ -676,31 +676,44 @@ Requires immediate attention
     // =====================================================================
 
     function syncShiftDates() {
-        const startMonth = document.getElementById('analyticsStartMonth').value;
-        const endMonth = document.getElementById('analyticsEndMonth').value;
-        if (startMonth) {
-            document.getElementById('shiftStartDate').value = startMonth + '-01';
+        const startEl = document.getElementById('analyticsStartMonth');
+        const endEl = document.getElementById('analyticsEndMonth');
+        const shiftStartEl = document.getElementById('shiftStartDate');
+        const shiftEndEl = document.getElementById('shiftEndDate');
+        
+        if (!startEl || !endEl) return;
+        
+        const startMonth = startEl.value;
+        const endMonth = endEl.value;
+        
+        if (startMonth && shiftStartEl) {
+            shiftStartEl.value = startMonth + '-01';
         }
-        if (endMonth) {
+        if (endMonth && shiftEndEl) {
             const [y, m] = endMonth.split('-');
             const lastDay = new Date(y, m, 0).getDate();
-            document.getElementById('shiftEndDate').value = `${y}-${m}-${lastDay}`;
+            shiftEndEl.value = `${y}-${m}-${lastDay}`;
         }
     }
 
     // Set default month range (3 months back to current month)
     (function setDefaultMonthRange() {
+        const startEl = document.getElementById('analyticsStartMonth');
+        const endEl = document.getElementById('analyticsEndMonth');
+        if (!startEl || !endEl) return;
+
         const now = new Date();
         const endMonth = now.toISOString().slice(0, 7); // YYYY-MM
         const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
         const startMonth = startDate.toISOString().slice(0, 7);
-        document.getElementById('analyticsStartMonth').value = startMonth;
-        document.getElementById('analyticsEndMonth').value = endMonth;
+        
+        startEl.value = startMonth;
+        endEl.value = endMonth;
 
         // Set max to 6 months before current month for start
         const maxStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-        document.getElementById('analyticsStartMonth').min = maxStart.toISOString().slice(0, 7);
-        document.getElementById('analyticsEndMonth').max = endMonth;
+        startEl.min = maxStart.toISOString().slice(0, 7);
+        endEl.max = endMonth;
         
         syncShiftDates();
     })();
@@ -749,11 +762,27 @@ Requires immediate attention
     }
 
     function loadAnalyticsData() {
-        const machine = document.getElementById('machineFilter').value;
-        const startMonth = document.getElementById('analyticsStartMonth').value;
-        const endMonth = document.getElementById('analyticsEndMonth').value;
-        const shiftStart = document.getElementById('shiftStartDate').value;
-        const shiftEnd = document.getElementById('shiftEndDate').value;
+        const machineFilter = document.getElementById('machineFilter');
+        // If machineFilter doesn't exist (focused mode), extract machine_id from URL
+        let machine = '';
+        if (machineFilter) {
+            machine = machineFilter.value;
+        } else {
+            const urlParams = new URLSearchParams(window.location.search);
+            machine = urlParams.get('machine_id') || '';
+        }
+
+        const startMonthEl = document.getElementById('analyticsStartMonth');
+        const endMonthEl = document.getElementById('analyticsEndMonth');
+        if (!startMonthEl || !endMonthEl) return;
+
+        const startMonth = startMonthEl.value;
+        const endMonth = endMonthEl.value;
+
+        const shiftStartEl = document.getElementById('shiftStartDate');
+        const shiftEndEl = document.getElementById('shiftEndDate');
+        const shiftStart = shiftStartEl ? shiftStartEl.value : '';
+        const shiftEnd = shiftEndEl ? shiftEndEl.value : '';
         
         let url = `/api/dashboard/analytics?start_month=${startMonth}&end_month=${endMonth}`;
         if (shiftStart) url += `&shift_start=${shiftStart}`;
@@ -777,17 +806,19 @@ Requires immediate attention
             .then(res => res.json())
             .then(res => {
                 if (res.status === 'success') {
-                    renderShiftChart(res.shift_data);
-                    renderMonthlyChart(res.monthly_data);
-                    renderFailureChart(res.failure_data);
+                    if (document.getElementById('shiftChart')) renderShiftChart(res.shift_data);
+                    if (document.getElementById('monthlyChart')) renderMonthlyChart(res.monthly_data);
+                    if (document.getElementById('failureChart')) renderFailureChart(res.failure_data);
                 }
             })
             .catch(err => console.error('Analytics fetch error:', err));
     }
     
     // Add event listeners for shift dates
-    document.getElementById('shiftStartDate').addEventListener('change', loadAnalyticsData);
-    document.getElementById('shiftEndDate').addEventListener('change', loadAnalyticsData);
+    const shiftStartInput = document.getElementById('shiftStartDate');
+    const shiftEndInput = document.getElementById('shiftEndDate');
+    if (shiftStartInput) shiftStartInput.addEventListener('change', loadAnalyticsData);
+    if (shiftEndInput) shiftEndInput.addEventListener('change', loadAnalyticsData);
 
     function renderShiftChart(data) {
         const ctx = document.getElementById('shiftChart').getContext('2d');
@@ -928,15 +959,20 @@ Requires immediate attention
     }
 
     // Load analytics when machine filter changes
-    document.getElementById('machineFilter').addEventListener('change', () => loadAnalyticsData());
+    const machineFilter = document.getElementById('machineFilter');
+    if (machineFilter) {
+        machineFilter.addEventListener('change', () => loadAnalyticsData());
+    }
 
     // Load analytics when month range changes
     function onMonthRangeChange() {
         syncShiftDates();
         loadAnalyticsData();
     }
-    document.getElementById('analyticsStartMonth').addEventListener('change', onMonthRangeChange);
-    document.getElementById('analyticsEndMonth').addEventListener('change', onMonthRangeChange);
+    const startMonthEl = document.getElementById('analyticsStartMonth');
+    const endMonthEl = document.getElementById('analyticsEndMonth');
+    if (startMonthEl) startMonthEl.addEventListener('change', onMonthRangeChange);
+    if (endMonthEl) endMonthEl.addEventListener('change', onMonthRangeChange);
 
     // Initial load
     loadAnalyticsData();
