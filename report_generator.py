@@ -11,27 +11,23 @@ with open(DATA_FILE, 'r', encoding='utf-8') as f:
     MACHINE_TEMPLATES = json.load(f)
 
 
+import re
+
 def find_template_data(machine_id):
-    """Search for the machine ID in the JSON keys, handling variations like ' (2)' suffixes."""
+    """Search for the machine ID in the JSON keys, gracefully handling trailing '(2)'."""
     machine_id = machine_id.strip().lower()
-    
     # 1. Exact match
     for key, data in MACHINE_TEMPLATES.items():
         if machine_id == key.lower().strip():
             return data
             
-    # 2. Match without ' (X)' suffix
-    import re
-    clean_id = re.sub(r'\s*\(\d+\)$', '', machine_id)
+    # 2. Normalize match (remove trailing (n))
+    def normalize(name):
+        return re.sub(r'\s*\(\d+\)\s*$', '', name).strip()
+        
+    norm_id = normalize(machine_id)
     for key, data in MACHINE_TEMPLATES.items():
-        clean_key = re.sub(r'\s*\(\d+\)$', '', key.lower().strip())
-        if clean_id == clean_key:
-            return data
-            
-    # 3. Partial match as fallback
-    for key, data in MACHINE_TEMPLATES.items():
-        clean_key = re.sub(r'\s*\(\d+\)$', '', key.lower().strip())
-        if clean_id in clean_key or clean_key in clean_id:
+        if norm_id == normalize(key.lower()):
             return data
             
     return None
