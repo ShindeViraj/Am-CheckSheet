@@ -943,14 +943,19 @@ Requires immediate attention
         // Build labels
         const labels = data.map(d => {
             const machineName = d.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
+            
             if (isFocused) {
                 // Full description wrapped
-                const fullText = machineName + ' — ' + (d.full_checkpoint || d.checkpoint);
+                // Only show description, we don't need machine name since it's already in the header
+                // But user requested "machine name - discription".
+                const fullText = machineName + ' - ' + (d.full_checkpoint || d.checkpoint);
                 return wrapText(fullText, 60);
             } else {
-                // Short description truncated
-                const cpShort = d.checkpoint.length > 35 ? d.checkpoint.substring(0, 35) + '…' : d.checkpoint;
-                return machineName + ' — ' + cpShort;
+                // Short description truncated to prevent left-side cutoff in small chart
+                const cpText = d.checkpoint;
+                // If it's literally "Checkpoint #N", don't truncate it.
+                const cpShort = cpText.length > 25 && !cpText.startsWith('Checkpoint #') ? cpText.substring(0, 25) + '…' : cpText;
+                return machineName + ' - ' + cpShort;
             }
         });
 
