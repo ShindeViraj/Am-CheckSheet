@@ -454,27 +454,13 @@ Requires immediate attention
         const menu = document.getElementById('dashboardMachineMenu');
         const icon = document.getElementById('dashboardMachineToggleIcon');
 
+        if (!toggle || !menu || !icon) return;
+
         toggle.addEventListener('click', event => {
             event.stopPropagation();
             const isOpen = menu.classList.toggle('hidden') === false;
             toggle.setAttribute('aria-expanded', String(isOpen));
             icon.innerText = isOpen ? 'remove' : 'add';
-        });
-
-        document.addEventListener('click', event => {
-            if (!menu.contains(event.target) && !toggle.contains(event.target)) {
-                menu.classList.add('hidden');
-                toggle.setAttribute('aria-expanded', 'false');
-                icon.innerText = 'add';
-            }
-        });
-
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') {
-                menu.classList.add('hidden');
-                toggle.setAttribute('aria-expanded', 'false');
-                icon.innerText = 'add';
-            }
         });
     }
 
