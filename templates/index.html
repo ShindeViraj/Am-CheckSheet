@@ -497,11 +497,13 @@ Requires immediate attention
 
     // Load machines list for filter
     function loadMachinesList() {
+        const sel = document.getElementById('machineFilter');
+        if (!sel) return; // Not on main dashboard
+
         fetch('/api/reports/machines_list')
             .then(res => res.json())
             .then(res => {
                 if(res.status === 'success'){
-                    const sel = document.getElementById('machineFilter');
                     const currentVal = sel.value;
                     sel.innerHTML = '<option value="">All Machines</option>';
                     res.data.forEach(m => {
@@ -522,16 +524,25 @@ Requires immediate attention
     // Auto-refresh machines list every 30 seconds
     setInterval(loadMachinesList, 30000);
 
-    document.getElementById('machineFilter').addEventListener('change', event => {
-        const machine = event.target.value;
-        document.getElementById('dashboardTitle').innerText = machine ? `${machine} Dashboard` : 'All Machines Dashboard';
-        const url = machine ? `/?machine_id=${encodeURIComponent(machine)}` : '/';
-        window.history.replaceState({}, '', url);
-        loadDashboardData(document.getElementById('dashboardDate').value);
-    });
+    const machineFilterEl = document.getElementById('machineFilter');
+    if (machineFilterEl) {
+        machineFilterEl.addEventListener('change', event => {
+            const machine = event.target.value;
+            const dashboardTitle = document.getElementById('dashboardTitle');
+            if (dashboardTitle) dashboardTitle.innerText = machine ? `${machine} Dashboard` : 'All Machines Dashboard';
+            const url = machine ? `/?machine_id=${encodeURIComponent(machine)}` : '/';
+            window.history.replaceState({}, '', url);
+            
+            const dashboardDateEl = document.getElementById('dashboardDate');
+            if (dashboardDateEl) loadDashboardData(dashboardDateEl.value);
+        });
+    }
 
     function loadDashboardData(date) {
-        const machine = document.getElementById('machineFilter').value;
+        const machineFilterEl = document.getElementById('machineFilter');
+        if (!machineFilterEl) return;
+        
+        const machine = machineFilterEl.value;
         let url = `/api/dashboard/summary?date=${date}&period=${currentPeriod}`;
         if (machine) url += `&machine_id=${encodeURIComponent(machine)}`;
         
@@ -602,7 +613,10 @@ Requires immediate attention
     }
     
     function updateChart(chartData) {
-        const ctx = document.getElementById('machineChart').getContext('2d');
+        const canvas = document.getElementById('machineChart');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
         const labels = chartData.map(m => m.group_key);
         const okData = chartData.map(m => m.total_ok);
         const nokData = chartData.map(m => m.total_nok);
@@ -628,6 +642,8 @@ Requires immediate attention
     
     function updateRecentTable(recent) {
         const tbody = document.querySelector('#recentTable tbody');
+        if (!tbody) return;
+        
         tbody.innerHTML = '';
         recent.forEach(r => {
             const tr = document.createElement('tr');
@@ -663,13 +679,16 @@ Requires immediate attention
         });
     }
     
-    document.getElementById('dashboardDate').addEventListener('change', e => loadDashboardData(e.target.value));
-    loadDashboardData(document.getElementById('dashboardDate').value);
-    
-    // Auto-refresh dashboard data every 15 seconds
-    setInterval(() => {
-        loadDashboardData(document.getElementById('dashboardDate').value);
-    }, 15000);
+    const dashboardDateEl = document.getElementById('dashboardDate');
+    if (dashboardDateEl) {
+        dashboardDateEl.addEventListener('change', e => loadDashboardData(e.target.value));
+        loadDashboardData(dashboardDateEl.value);
+        
+        // Auto-refresh dashboard data every 15 seconds
+        setInterval(() => {
+            loadDashboardData(dashboardDateEl.value);
+        }, 15000);
+    }
 
     // =====================================================================
     // ANALYTICS SECTION
@@ -915,12 +934,38 @@ Requires immediate attention
     function renderFailureChart(data) {
         const ctx = document.getElementById('failureChart').getContext('2d');
         if (failureChart) failureChart.destroy();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const isFocused = urlParams.get('focus') === 'failure';
 
-        // Build short labels like "MIG Welding — Check wire..."
+        function wrapText(text, maxLineLength) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = words[0] || '';
+            for (let i = 1; i < words.length; i++) {
+                if (currentLine.length + words[i].length + 1 <= maxLineLength) {
+                    currentLine += ' ' + words[i];
+                } else {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                }
+            }
+            if (currentLine) lines.push(currentLine);
+            return lines;
+        }
+
+        // Build labels
         const labels = data.map(d => {
             const machineName = d.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
-            const cpShort = d.checkpoint.length > 35 ? d.checkpoint.substring(0, 35) + '…' : d.checkpoint;
-            return machineName + ' — ' + cpShort;
+            if (isFocused) {
+                // Full description wrapped
+                const fullText = machineName + ' — ' + (d.full_checkpoint || d.checkpoint);
+                return wrapText(fullText, 60);
+            } else {
+                // Short description truncated
+                const cpShort = d.checkpoint.length > 35 ? d.checkpoint.substring(0, 35) + '…' : d.checkpoint;
+                return machineName + ' — ' + cpShort;
+            }
         });
 
         failureChart = new Chart(ctx, {
@@ -945,14 +990,24 @@ Requires immediate attention
                         callbacks: {
                             title: function(items) {
                                 const idx = items[0].dataIndex;
-                                return data[idx].machine + '\n' + data[idx].checkpoint;
+                                return data[idx].machine + '\n' + (data[idx].full_checkpoint || data[idx].checkpoint);
                             }
                         }
                     }
                 },
                 scales: {
                     x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, title: { display: true, text: 'Failure Count', font: { family: 'Inter', size: 11 } } },
-                    y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 10 }, autoSkip: false } }
+                    y: { 
+                        grid: { display: false }, 
+                        ticks: { 
+                            font: { 
+                                family: 'Inter', 
+                                size: isFocused ? 12 : 10,
+                                weight: isFocused ? 'bold' : 'normal'
+                            }, 
+                            autoSkip: false 
+                        } 
+                    }
                 }
             }
         });

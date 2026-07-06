@@ -368,16 +368,19 @@ def api_dashboard_analytics():
             for r in failure_rows:
                 tpl = find_template_data(r['machine_id'])
                 cp_desc = f"Checkpoint #{r['checkpoint_no']}"
+                full_desc = cp_desc
                 if tpl and 'checkpoints' in tpl:
                     for cp in tpl['checkpoints']:
                         if str(cp.get('s_no')) == str(r['checkpoint_no']):
                             raw = cp.get('check_point', cp_desc)
+                            full_desc = raw.strip()
                             # Take only the first line for a short label
                             cp_desc = raw.split('\n')[0].strip()
                             break
                 failure_data.append({
                     'machine': r['machine_id'],
                     'checkpoint': cp_desc,
+                    'full_checkpoint': full_desc,
                     'nok_count': int(r['nok_count'] or 0),
                 })
 
