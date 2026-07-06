@@ -248,13 +248,19 @@ def api_dashboard_analytics():
         start_month = default_start
         end_month = default_end
 
-    # Build date range strings for SQL
+    # Build date range strings for month SQL
     start_date_str = start_month + '-01'
     # End of end_month
     em_parsed = datetime.strptime(end_month, '%Y-%m')
     import calendar as _cal
     last_day = _cal.monthrange(em_parsed.year, em_parsed.month)[1]
     end_date_str = f"{end_month}-{last_day:02d}"
+
+    # Shift-specific dates
+    default_shift_end = now.strftime('%Y-%m-%d')
+    default_shift_start = (now - timedelta(days=7)).strftime('%Y-%m-%d')
+    shift_start_date = request.args.get('shift_start', default_shift_start)
+    shift_end_date = request.args.get('shift_end', default_shift_end)
 
     try:
         conn = get_db()
@@ -284,7 +290,7 @@ def api_dashboard_analytics():
                   {machine_sql}
                 GROUP BY shift
                 ORDER BY FIELD(shift, 'A', 'B', 'C')
-            """, tuple([start_date_str, end_date_str] + machine_params))
+            """, tuple([shift_start_date, shift_end_date] + machine_params))
             shift_rows = cur.fetchall()
 
             # Ensure all 3 shifts are present with NOK rate
@@ -345,12 +351,14 @@ def api_dashboard_analytics():
                        SUM(checkpoint_not_ok) as nok_count
                 FROM checkpoints
                 WHERE checkpoint_not_ok = 1
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                   {machine_sql}
                   {exclusion_sql}
                 GROUP BY machine_id, checkpoint_no
                 ORDER BY nok_count DESC
                 LIMIT 10
-            """, tuple(machine_params + exclusion_params))
+            """, tuple([start_date_str, end_date_str] + machine_params + exclusion_params))
             failure_rows = cur.fetchall()
 
             # Map checkpoint descriptions from JSON

@@ -162,12 +162,24 @@
                     <span class="material-symbols-outlined transition-transform" id="dashboardMachineToggleIcon">add</span>
                 </button>
             </div>
-            <div id="dashboardMachineMenu" class="hidden mt-2 max-h-72 overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
+            <div id="dashboardMachineMenu" class="hidden mt-2 max-h-[60vh] overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
                 {% for machine_name in machine_names %}
-                <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="mx-2 my-1 flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98] {{ 'border-secondary bg-secondary text-white' if machine_name == selected_machine else 'border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48] hover:text-white' }}">
-                    <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
-                    <span>{{ machine_name }}</span>
-                </a>
+                <div class="flex flex-col mb-1">
+                    <div class="flex items-center justify-between mx-2 rounded-md border {{ 'border-secondary bg-secondary text-white' if machine_name == selected_machine else 'border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48]' }}">
+                        <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-medium hover:text-white transition-all active:scale-[0.98]">
+                            <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
+                            <span class="truncate">{{ machine_name }}</span>
+                        </a>
+                        <button type="button" onclick="toggleSidebarMachine('{{ machine_name|replace(' ', '_') }}', event)" class="px-2 py-2 text-gray-400 hover:text-white transition-colors" aria-label="Toggle {{ machine_name }} analytics">
+                            <span class="material-symbols-outlined text-[20px]" id="icon-{{ machine_name|replace(' ', '_') }}">add</span>
+                        </button>
+                    </div>
+                    <div id="submenu-{{ machine_name|replace(' ', '_') }}" class="hidden flex-col pl-9 pr-2 mt-1 space-y-1">
+                        <button onclick="selectMachineAndScroll('{{ machine_name }}', 'shiftChartSection')" class="text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">schedule</span>Shift-Wise Analysis</button>
+                        <button onclick="selectMachineAndScroll('{{ machine_name }}', 'failureChartSection')" class="text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">report_problem</span>Failing Checkpoints</button>
+                        <button onclick="selectMachineAndScroll('{{ machine_name }}', 'monthlyChartSection')" class="text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span>Month-Wise Trend</button>
+                    </div>
+                </div>
                 {% endfor %}
             </div>
         </div>
@@ -175,27 +187,6 @@
             <span class="material-symbols-outlined text-[28px]" data-icon="description">description</span>
             <span class="font-body-lg text-body-lg">Machine Reports</span>
         </a>
-
-        <!-- Analytics Dropdown -->
-        <div>
-            <div class="flex rounded-lg">
-                <a class="text-gray-400 flex flex-1 items-center gap-md p-md hover:bg-[#2a2a40] hover:text-white transition-all rounded-l-lg active:scale-95 font-medium cursor-pointer" onclick="document.getElementById('analyticsSection').scrollIntoView({behavior:'smooth'})">
-                    <span class="material-symbols-outlined text-[28px]">analytics</span>
-                    <span class="font-body-lg text-body-lg">Analytics</span>
-                </a>
-                <button type="button" id="analyticsToggle" class="text-gray-400 w-10 rounded-r-lg flex items-center justify-center hover:bg-[#2a2a40] hover:text-white transition-colors" aria-label="Machine analytics" aria-expanded="false">
-                    <span class="material-symbols-outlined transition-transform" id="analyticsToggleIcon">add</span>
-                </button>
-            </div>
-            <div id="analyticsMenu" class="hidden mt-2 max-h-72 overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
-                {% for machine_name in machine_names %}
-                <button type="button" onclick="selectMachineAnalytics('{{ machine_name }}')" class="w-full mx-2 my-1 flex items-center gap-2 rounded-md border border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48] hover:text-white px-3 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98]" style="max-width:calc(100% - 16px)">
-                    <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
-                    <span class="truncate">{{ machine_name }}</span>
-                </button>
-                {% endfor %}
-            </div>
-        </div>
     </nav>
     
 </aside>
@@ -324,47 +315,8 @@ Requires immediate attention
 <!-- Analytics Section -->
 <div id="analyticsSection" class="scroll-mt-24">
 
-<!-- Row: Shift-wise + Point-wise -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg mt-lg">
-
-    <!-- Shift-Wise Performance -->
-    <div class="premium-card overflow-hidden">
-        <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-            <div class="flex items-center gap-sm">
-                <span class="material-symbols-outlined text-primary">schedule</span>
-                <div>
-                    <h3 class="font-headline-md text-[18px] font-semibold text-primary">Shift-Wise Performance</h3>
-                    <p class="text-[11px] text-on-surface-variant mt-0.5" id="shiftChartSubtitle">Loading...</p>
-                </div>
-            </div>
-        </div>
-        <div class="p-lg">
-            <div class="w-full h-[320px] relative">
-                <canvas id="shiftChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Point-Wise Failure Analysis -->
-    <div class="premium-card overflow-hidden">
-        <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-            <div class="flex items-center gap-sm">
-                <span class="material-symbols-outlined text-error">report_problem</span>
-                <h3 class="font-headline-md text-[18px] font-semibold text-primary">Top Failing Checkpoints</h3>
-            </div>
-            <span class="text-[11px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-full">Excl. 5S Cleaning</span>
-        </div>
-        <div class="p-lg">
-            <div class="w-full h-[320px] relative">
-                <canvas id="failureChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-</div>
-
 <!-- Month-Wise Trend (full width) -->
-<div class="premium-card overflow-hidden mt-lg">
+<div id="monthlyChartSection" class="premium-card overflow-hidden mt-lg scroll-mt-24">
     <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <div class="flex items-center gap-sm">
             <span class="material-symbols-outlined text-primary">trending_up</span>
@@ -386,6 +338,52 @@ Requires immediate attention
             <canvas id="monthlyChart"></canvas>
         </div>
     </div>
+</div>
+
+<!-- Row: Shift-wise + Point-wise -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg mt-lg">
+
+    <!-- Shift-Wise Performance -->
+    <div id="shiftChartSection" class="premium-card overflow-hidden scroll-mt-24">
+        <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-2">
+            <div class="flex items-center gap-sm">
+                <span class="material-symbols-outlined text-primary">schedule</span>
+                <div>
+                    <h3 class="font-headline-md text-[18px] font-semibold text-primary">Shift-Wise Performance</h3>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5" id="shiftChartSubtitle">Loading...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-sm">
+                <div class="flex items-center gap-1 border border-gray-200 bg-white rounded-md px-1.5 py-1">
+                    <input type="date" id="shiftStartDate" class="text-[11px] text-primary font-medium outline-none cursor-pointer bg-transparent">
+                    <span class="text-gray-400 text-[10px]">to</span>
+                    <input type="date" id="shiftEndDate" class="text-[11px] text-primary font-medium outline-none cursor-pointer bg-transparent">
+                </div>
+            </div>
+        </div>
+        <div class="p-lg">
+            <div class="w-full h-[320px] relative">
+                <canvas id="shiftChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Point-Wise Failure Analysis -->
+    <div id="failureChartSection" class="premium-card overflow-hidden scroll-mt-24">
+        <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div class="flex items-center gap-sm">
+                <span class="material-symbols-outlined text-error">report_problem</span>
+                <h3 class="font-headline-md text-[18px] font-semibold text-primary">Top Failing Checkpoints</h3>
+            </div>
+            <span class="text-[11px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-full">Excl. 5S Cleaning</span>
+        </div>
+        <div class="p-lg">
+            <div class="w-full h-[320px] relative">
+                <canvas id="failureChart"></canvas>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 </div><!-- /analyticsSection -->
@@ -658,45 +656,41 @@ Requires immediate attention
         document.getElementById('analyticsEndMonth').max = endMonth;
     })();
 
-    // Analytics sidebar toggle
-    (function initAnalyticsMenu() {
-        const toggle = document.getElementById('analyticsToggle');
-        const menu = document.getElementById('analyticsMenu');
-        const icon = document.getElementById('analyticsToggleIcon');
-        if (!toggle || !menu) return;
-
-        toggle.addEventListener('click', event => {
-            event.stopPropagation();
-            const isOpen = menu.classList.toggle('hidden') === false;
-            toggle.setAttribute('aria-expanded', String(isOpen));
-            icon.innerText = isOpen ? 'remove' : 'add';
-        });
-
-        document.addEventListener('click', event => {
-            if (!menu.contains(event.target) && !toggle.contains(event.target)) {
-                menu.classList.add('hidden');
-                toggle.setAttribute('aria-expanded', 'false');
-                icon.innerText = 'add';
+    // Accordion for sidebar machines
+    window.toggleSidebarMachine = function(machineId, event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const submenu = document.getElementById(`submenu-${machineId}`);
+        const icon = document.getElementById(`icon-${machineId}`);
+        if (submenu) {
+            const isHidden = submenu.classList.contains('hidden');
+            if (isHidden) {
+                submenu.classList.remove('hidden');
+                submenu.classList.add('flex');
+                if(icon) icon.innerText = 'remove';
+            } else {
+                submenu.classList.add('hidden');
+                submenu.classList.remove('flex');
+                if(icon) icon.innerText = 'add';
             }
-        });
-    })();
+        }
+    };
 
-    // Select machine from sidebar analytics dropdown → set filter, scroll, reload
-    function selectMachineAnalytics(machineName) {
+    window.selectMachineAndScroll = function(machineName, sectionId) {
         const sel = document.getElementById('machineFilter');
-        sel.value = machineName;
-        sel.dispatchEvent(new Event('change'));
-        document.getElementById('dashboardTitle').innerText = machineName + ' Dashboard';
-        const url = `/?machine_id=${encodeURIComponent(machineName)}`;
-        window.history.replaceState({}, '', url);
-        // Close the menu
-        document.getElementById('analyticsMenu').classList.add('hidden');
-        document.getElementById('analyticsToggleIcon').innerText = 'add';
-        // Scroll to analytics
+        if (sel.value !== machineName) {
+            sel.value = machineName;
+            sel.dispatchEvent(new Event('change'));
+            document.getElementById('dashboardTitle').innerText = machineName + ' Dashboard';
+            const url = `/?machine_id=${encodeURIComponent(machineName)}`;
+            window.history.replaceState({}, '', url);
+        }
+        
         setTimeout(() => {
-            document.getElementById('analyticsSection').scrollIntoView({ behavior: 'smooth' });
-        }, 200);
-    }
+            const el = document.getElementById(sectionId);
+            if(el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+    };
 
     // Scroll to analytics if hash is present
     if (window.location.hash === '#analyticsSection') {
@@ -709,14 +703,19 @@ Requires immediate attention
         const machine = document.getElementById('machineFilter').value;
         const startMonth = document.getElementById('analyticsStartMonth').value;
         const endMonth = document.getElementById('analyticsEndMonth').value;
+        const shiftStart = document.getElementById('shiftStartDate').value;
+        const shiftEnd = document.getElementById('shiftEndDate').value;
+        
         let url = `/api/dashboard/analytics?start_month=${startMonth}&end_month=${endMonth}`;
+        if (shiftStart) url += `&shift_start=${shiftStart}`;
+        if (shiftEnd) url += `&shift_end=${shiftEnd}`;
         if (machine) url += `&machine_id=${encodeURIComponent(machine)}`;
 
         // Update shift chart subtitle with context
         const machineName = machine ? machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '') : 'All Machines';
         const subtitleEl = document.getElementById('shiftChartSubtitle');
         if (subtitleEl) {
-            subtitleEl.textContent = machineName + '  |  ' + startMonth + ' to ' + endMonth;
+            subtitleEl.textContent = machineName + (shiftStart && shiftEnd ? `  |  ${shiftStart} to ${shiftEnd}` : `  |  ${startMonth} to ${endMonth}`);
         }
 
         fetch(url)
@@ -730,6 +729,10 @@ Requires immediate attention
             })
             .catch(err => console.error('Analytics fetch error:', err));
     }
+    
+    // Add event listeners for shift dates
+    document.getElementById('shiftStartDate').addEventListener('change', loadAnalyticsData);
+    document.getElementById('shiftEndDate').addEventListener('change', loadAnalyticsData);
 
     function renderShiftChart(data) {
         const ctx = document.getElementById('shiftChart').getContext('2d');
