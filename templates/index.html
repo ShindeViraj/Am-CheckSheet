@@ -166,8 +166,8 @@
                 {% for machine_name in machine_names %}
                 <div class="flex flex-col mb-1">
                     <div class="flex items-center justify-between mx-2 rounded-md border {{ 'border-secondary bg-secondary text-white' if machine_name == selected_machine else 'border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48]' }}">
-                        <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-medium hover:text-white transition-all active:scale-[0.98]">
-                            <span class="material-symbols-outlined text-[18px]">precision_manufacturing</span>
+                        <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-medium hover:text-white transition-all active:scale-[0.98] min-w-0">
+                            <span class="material-symbols-outlined text-[18px] shrink-0">precision_manufacturing</span>
                             <span class="truncate">{{ machine_name }}</span>
                         </a>
                         <button type="button" onclick="toggleSidebarMachine('{{ machine_name|replace(' ', '_') }}', event)" class="px-2 py-2 text-gray-400 hover:text-white transition-colors" aria-label="Toggle {{ machine_name }} analytics">
@@ -641,6 +641,19 @@ Requires immediate attention
     // ANALYTICS SECTION
     // =====================================================================
 
+    function syncShiftDates() {
+        const startMonth = document.getElementById('analyticsStartMonth').value;
+        const endMonth = document.getElementById('analyticsEndMonth').value;
+        if (startMonth) {
+            document.getElementById('shiftStartDate').value = startMonth + '-01';
+        }
+        if (endMonth) {
+            const [y, m] = endMonth.split('-');
+            const lastDay = new Date(y, m, 0).getDate();
+            document.getElementById('shiftEndDate').value = `${y}-${m}-${lastDay}`;
+        }
+    }
+
     // Set default month range (3 months back to current month)
     (function setDefaultMonthRange() {
         const now = new Date();
@@ -654,6 +667,8 @@ Requires immediate attention
         const maxStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
         document.getElementById('analyticsStartMonth').min = maxStart.toISOString().slice(0, 7);
         document.getElementById('analyticsEndMonth').max = endMonth;
+        
+        syncShiftDates();
     })();
 
     // Accordion for sidebar machines
@@ -876,8 +891,12 @@ Requires immediate attention
     document.getElementById('machineFilter').addEventListener('change', () => loadAnalyticsData());
 
     // Load analytics when month range changes
-    document.getElementById('analyticsStartMonth').addEventListener('change', () => loadAnalyticsData());
-    document.getElementById('analyticsEndMonth').addEventListener('change', () => loadAnalyticsData());
+    function onMonthRangeChange() {
+        syncShiftDates();
+        loadAnalyticsData();
+    }
+    document.getElementById('analyticsStartMonth').addEventListener('change', onMonthRangeChange);
+    document.getElementById('analyticsEndMonth').addEventListener('change', onMonthRangeChange);
 
     // Initial load
     loadAnalyticsData();
