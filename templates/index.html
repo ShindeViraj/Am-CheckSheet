@@ -158,11 +158,11 @@
                     <span class="material-symbols-outlined text-[28px]" data-icon="dashboard">dashboard</span>
                     <span class="font-body-lg text-body-lg">Dashboard</span>
                 </a>
-                <button type="button" id="dashboardMachineToggle" class="bg-secondary text-white w-12 rounded-r-lg border-l border-white/20 flex items-center justify-center hover:bg-secondary/90 transition-colors" aria-label="Show machine dashboards" aria-expanded="false" aria-controls="dashboardMachineMenu">
-                    <span class="material-symbols-outlined transition-transform" id="dashboardMachineToggleIcon">add</span>
+                <button type="button" id="dashboardMachineToggle" class="bg-secondary text-white w-12 rounded-r-lg border-l border-white/20 flex items-center justify-center hover:bg-secondary/90 transition-colors" aria-label="Show machine dashboards" aria-expanded="{{ 'true' if selected_machine else 'false' }}" aria-controls="dashboardMachineMenu">
+                    <span class="material-symbols-outlined transition-transform" id="dashboardMachineToggleIcon">{{ 'remove' if selected_machine else 'add' }}</span>
                 </button>
             </div>
-            <div id="dashboardMachineMenu" class="hidden mt-2 max-h-[60vh] overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
+            <div id="dashboardMachineMenu" class="{{ '' if selected_machine else 'hidden' }} mt-2 max-h-[60vh] overflow-y-auto rounded-lg bg-[#171725] border border-[#34344a] py-1 shadow-xl">
                 {% for machine_name in machine_names %}
                 <div class="flex flex-col mb-1">
                     <div class="flex items-center justify-between mx-2 rounded-md border {{ 'border-secondary bg-secondary text-white' if machine_name == selected_machine else 'border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48]' }}">
@@ -171,10 +171,10 @@
                             <span class="break-words whitespace-normal text-left">{{ machine_name }}</span>
                         </a>
                         <button type="button" onclick="toggleSidebarMachine('{{ machine_name|replace(' ', '_') }}', event)" class="px-2 py-2 text-gray-400 hover:text-white transition-colors" aria-label="Toggle {{ machine_name }} analytics">
-                            <span class="material-symbols-outlined text-[20px]" id="icon-{{ machine_name|replace(' ', '_') }}">add</span>
+                            <span class="material-symbols-outlined text-[20px]" id="icon-{{ machine_name|replace(' ', '_') }}">{{ 'remove' if machine_name == selected_machine and focus else 'add' }}</span>
                         </button>
                     </div>
-                    <div id="submenu-{{ machine_name|replace(' ', '_') }}" class="hidden flex-col pl-9 pr-2 mt-1 space-y-1">
+                    <div id="submenu-{{ machine_name|replace(' ', '_') }}" class="{{ 'flex' if machine_name == selected_machine and focus else 'hidden' }} flex-col pl-9 pr-2 mt-1 space-y-1">
                         <a href="{{ url_for('dashboard', machine_id=machine_name, focus='shift') }}" class="block text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">schedule</span>Shift-Wise Analysis</a>
                         <a href="{{ url_for('dashboard', machine_id=machine_name, focus='failure') }}" class="block text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">report_problem</span>Failing Checkpoints</a>
                         <a href="{{ url_for('dashboard', machine_id=machine_name, focus='monthly') }}" class="block text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span>Month-Wise Trend</a>
@@ -314,11 +314,23 @@ Requires immediate attention
 </div>
 {% else %}
 <div class="flex items-center justify-between mb-lg">
-    <a href="{{ url_for('dashboard', machine_id=selected_machine) }}" class="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors font-medium text-sm shadow-sm w-fit">
-        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-        Back to Full Dashboard
-    </a>
-    <h2 class="font-display-lg text-[22px] text-primary font-bold">{{ selected_machine if selected_machine else 'All Machines' }} Dashboard</h2>
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('dashboard', machine_id=selected_machine) }}" class="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors font-medium text-sm shadow-sm w-fit">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Back to Full Dashboard
+        </a>
+        <h2 class="font-display-lg text-[22px] text-primary font-bold">{{ selected_machine if selected_machine else 'All Machines' }} Dashboard</h2>
+    </div>
+    <div class="flex items-center gap-md bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
+        <div class="flex items-center gap-xs">
+            <label for="analyticsStartMonth" class="font-label-md text-[11px] text-on-surface-variant">Month From:</label>
+            <input type="month" id="analyticsStartMonth" class="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer">
+        </div>
+        <div class="flex items-center gap-xs">
+            <label for="analyticsEndMonth" class="font-label-md text-[11px] text-on-surface-variant">To:</label>
+            <input type="month" id="analyticsEndMonth" class="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer">
+        </div>
+    </div>
 </div>
 {% endif %}
 
@@ -333,6 +345,7 @@ Requires immediate attention
             <span class="material-symbols-outlined text-primary">trending_up</span>
             <h3 class="font-headline-md text-[18px] font-semibold text-primary">Month-Wise Trend</h3>
         </div>
+        {% if not focus %}
         <div class="flex items-center gap-md">
             <div class="flex items-center gap-xs">
                 <label for="analyticsStartMonth" class="font-label-md text-[11px] text-on-surface-variant">From:</label>
@@ -343,6 +356,7 @@ Requires immediate attention
                 <input type="month" id="analyticsEndMonth" class="bg-white border border-gray-200 rounded-lg px-2 py-1 text-sm text-primary font-medium outline-none cursor-pointer shadow-sm">
             </div>
         </div>
+        {% endif %}
     </div>
     <div class="p-lg">
         <div class="w-full relative {{ 'h-[75vh]' if focus else 'h-[350px]' }}">
