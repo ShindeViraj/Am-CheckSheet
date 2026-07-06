@@ -12,11 +12,28 @@ with open(DATA_FILE, 'r', encoding='utf-8') as f:
 
 
 def find_template_data(machine_id):
-    """Exact case-insensitive search for the machine ID in the JSON keys"""
+    """Search for the machine ID in the JSON keys, handling variations like ' (2)' suffixes."""
     machine_id = machine_id.strip().lower()
+    
+    # 1. Exact match
     for key, data in MACHINE_TEMPLATES.items():
         if machine_id == key.lower().strip():
             return data
+            
+    # 2. Match without ' (X)' suffix
+    import re
+    clean_id = re.sub(r'\s*\(\d+\)$', '', machine_id)
+    for key, data in MACHINE_TEMPLATES.items():
+        clean_key = re.sub(r'\s*\(\d+\)$', '', key.lower().strip())
+        if clean_id == clean_key:
+            return data
+            
+    # 3. Partial match as fallback
+    for key, data in MACHINE_TEMPLATES.items():
+        clean_key = re.sub(r'\s*\(\d+\)$', '', key.lower().strip())
+        if clean_id in clean_key or clean_key in clean_id:
+            return data
+            
     return None
 
 
