@@ -168,16 +168,16 @@
                     <div class="flex items-center justify-between mx-2 rounded-md border {{ 'border-secondary bg-secondary text-white' if machine_name == selected_machine else 'border-[#3a3a50] bg-[#242438] text-gray-200 hover:border-secondary hover:bg-[#2f2f48]' }}">
                         <a href="{{ url_for('dashboard', machine_id=machine_name) }}" class="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-medium hover:text-white transition-all active:scale-[0.98] min-w-0">
                             <span class="material-symbols-outlined text-[18px] shrink-0">precision_manufacturing</span>
-                            <span class="truncate">{{ machine_name }}</span>
+                            <span class="break-words whitespace-normal text-left">{{ machine_name }}</span>
                         </a>
                         <button type="button" onclick="toggleSidebarMachine('{{ machine_name|replace(' ', '_') }}', event)" class="px-2 py-2 text-gray-400 hover:text-white transition-colors" aria-label="Toggle {{ machine_name }} analytics">
                             <span class="material-symbols-outlined text-[20px]" id="icon-{{ machine_name|replace(' ', '_') }}">add</span>
                         </button>
                     </div>
                     <div id="submenu-{{ machine_name|replace(' ', '_') }}" class="hidden flex-col pl-9 pr-2 mt-1 space-y-1">
-                        <button onclick="selectMachineAndScroll('{{ machine_name }}', 'shiftChartSection')" class="text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">schedule</span>Shift-Wise Analysis</button>
-                        <button onclick="selectMachineAndScroll('{{ machine_name }}', 'failureChartSection')" class="text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">report_problem</span>Failing Checkpoints</button>
-                        <button onclick="selectMachineAndScroll('{{ machine_name }}', 'monthlyChartSection')" class="text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span>Month-Wise Trend</button>
+                        <a href="{{ url_for('dashboard', machine_id=machine_name, focus='shift') }}" class="block text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">schedule</span>Shift-Wise Analysis</a>
+                        <a href="{{ url_for('dashboard', machine_id=machine_name, focus='failure') }}" class="block text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">report_problem</span>Failing Checkpoints</a>
+                        <a href="{{ url_for('dashboard', machine_id=machine_name, focus='monthly') }}" class="block text-left text-xs text-gray-400 hover:text-white py-1.5 transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">trending_up</span>Month-Wise Trend</a>
                     </div>
                 </div>
                 {% endfor %}
@@ -214,6 +214,7 @@
 </header>
 <!-- Page Content -->
 <div class="p-lg space-y-lg max-w-[1600px] mx-auto">
+{% if not focus %}
 <!-- Page Header -->
 <div class="flex items-end justify-between border-b border-outline-variant pb-md">
 <div>
@@ -311,9 +312,19 @@ Requires immediate attention
     
 </div>
 </div>
+{% else %}
+<div class="flex items-center justify-between mb-lg">
+    <a href="{{ url_for('dashboard', machine_id=selected_machine) }}" class="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-colors font-medium text-sm shadow-sm w-fit">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        Back to Full Dashboard
+    </a>
+    <h2 class="font-display-lg text-[22px] text-primary font-bold">{{ selected_machine if selected_machine else 'All Machines' }} Dashboard</h2>
+</div>
+{% endif %}
 
 <!-- Analytics Section -->
 <div id="analyticsSection" class="scroll-mt-24">
+{% if not focus or focus == 'monthly' %}
 
 <!-- Month-Wise Trend (full width) -->
 <div id="monthlyChartSection" class="premium-card overflow-hidden mt-lg scroll-mt-24">
@@ -334,15 +345,17 @@ Requires immediate attention
         </div>
     </div>
     <div class="p-lg">
-        <div class="w-full h-[350px] relative">
+        <div class="w-full relative {{ 'h-[75vh]' if focus else 'h-[350px]' }}">
             <canvas id="monthlyChart"></canvas>
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Row: Shift-wise + Point-wise -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg mt-lg">
+<div class="grid {{ 'grid-cols-1' if focus else 'grid-cols-1 lg:grid-cols-2' }} gap-lg mt-lg">
 
+{% if not focus or focus == 'shift' %}
     <!-- Shift-Wise Performance -->
     <div id="shiftChartSection" class="premium-card overflow-hidden scroll-mt-24">
         <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-wrap gap-2">
@@ -362,12 +375,14 @@ Requires immediate attention
             </div>
         </div>
         <div class="p-lg">
-            <div class="w-full h-[320px] relative">
+            <div class="w-full relative {{ 'h-[75vh]' if focus else 'h-[320px]' }}">
                 <canvas id="shiftChart"></canvas>
             </div>
         </div>
     </div>
+{% endif %}
 
+{% if not focus or focus == 'failure' %}
     <!-- Point-Wise Failure Analysis -->
     <div id="failureChartSection" class="premium-card overflow-hidden scroll-mt-24">
         <div class="px-lg py-md border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
@@ -378,15 +393,16 @@ Requires immediate attention
             <span class="text-[11px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-full">Excl. 5S Cleaning</span>
         </div>
         <div class="p-lg">
-            <div class="w-full h-[320px] relative">
+            <div class="w-full relative {{ 'h-[75vh]' if focus else 'h-[320px]' }}">
                 <canvas id="failureChart"></canvas>
             </div>
         </div>
     </div>
-
+{% endif %}
 </div>
 
 </div><!-- /analyticsSection -->
+{% if not focus %}
     <div class="grid grid-cols-1 gap-lg pb-xl mt-8">
         <div class="premium-card p-lg">
             <h3 class="font-headline-md text-headline-md text-primary mb-lg">Recent Checkpoints</h3>
@@ -406,6 +422,7 @@ Requires immediate attention
             </div>
         </div>
     </div>
+{% endif %}
     
 <script src="/static/chart.umd.js"></script>
     <script>

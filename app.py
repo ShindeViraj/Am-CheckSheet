@@ -18,6 +18,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 def dashboard():
     machine_names = get_machine_names()
     selected_machine = request.args.get('machine_id', '')
+    focus = request.args.get('focus', '')
     if selected_machine not in machine_names:
         selected_machine = ''
     return render_template(
@@ -25,6 +26,7 @@ def dashboard():
         today=datetime.now().strftime('%Y-%m-%d'),
         machine_names=machine_names,
         selected_machine=selected_machine,
+        focus=focus,
     )
 
 
