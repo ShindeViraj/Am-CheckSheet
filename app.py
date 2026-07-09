@@ -534,6 +534,158 @@ def api_export_excel():
 
 
 # ---------------------------------------------------------------------------
+# API – Remote Machine Data Ingestion
+# ---------------------------------------------------------------------------
+# Receives checkpoint data from secondary PCs on the LAN that cannot
+# directly connect to the database. The secondary PC's Node-RED flow
+# sends an HTTP POST here instead of writing to MySQL directly.
+# ---------------------------------------------------------------------------
+
+from dotenv import load_dotenv as _load_dotenv
+_load_dotenv()
+_INGEST_API_KEY = os.environ.get('INGEST_API_KEY', '')
+
+# In-memory deduplication store (mirrors Node-RED's flow.set/flow.get)
+# Resets on server restart — acceptable, same as Node-RED behaviour.
+_previous_cycles = {}
+
+
+@app.route('/api/ingest/checkpoints', methods=['POST'])
+def api_ingest_checkpoints():
+    """Receive checkpoint data from a remote PC's Node-RED HTTP Request node."""
+
+    # ── API Key Authentication ──────────────────────────────────────────
+    api_key = request.headers.get('X-API-Key', '')
+    if not _INGEST_API_KEY or api_key != _INGEST_API_KEY:
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 403
+
+    # ── Parse JSON body ─────────────────────────────────────────────────
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'status': 'error', 'message': 'Invalid JSON body'}), 400
+
+    machine_id = body.get('machine_id', '').strip()
+    data = body.get('data')
+    if not machine_id or not data:
+        return jsonify({
+            'status': 'error',
+            'message': 'Missing machine_id or data'
+        }), 400
+
+    # ── Resolve TOTAL_CHECKPOINTS from machine_data.json ────────────────
+    tpl = find_template_data(machine_id)
+    if tpl and 'checkpoints' in tpl:
+        total_cp = len(tpl['checkpoints'])
+    else:
+        # Fallback: use the length of the CheckPointsOk array
+        total_cp = len(data.get('CheckPointsOk', []))
+
+    if total_cp == 0:
+        return jsonify({
+            'status': 'error',
+            'message': f'Cannot resolve checkpoint count for machine: {machine_id}'
+        }), 400
+
+    # ── Slice arrays to TOTAL_CHECKPOINTS (safety trim) ─────────────────
+    cp_ok = (data.get('CheckPointsOk') or [])[:total_cp]
+    cp_nok = (data.get('CheckPointsNOk') or [])[:total_cp]
+    cp_time = (data.get('CheckPointTimeTaken') or [])[:total_cp]
+    cp_start = (data.get('CheckPointStart') or [])[:total_cp]
+    cp_end = (data.get('CheckPointEnd') or data.get(' CheckPointEnd') or [])[:total_cp]
+
+    # Pad arrays to total_cp if shorter
+    while len(cp_ok) < total_cp:
+        cp_ok.append(False)
+    while len(cp_nok) < total_cp:
+        cp_nok.append(False)
+    while len(cp_time) < total_cp:
+        cp_time.append(0)
+    while len(cp_start) < total_cp:
+        cp_start.append('')
+    while len(cp_end) < total_cp:
+        cp_end.append('')
+
+    # ── Completeness Check ──────────────────────────────────────────────
+    for i in range(total_cp):
+        if not cp_start[i] or not cp_end[i]:
+            return jsonify({
+                'status': 'waiting',
+                'message': f'Incomplete cycle — checkpoint {i + 1}/{total_cp} missing timestamp'
+            }), 202
+
+    # ── Deduplication Check ─────────────────────────────────────────────
+    prev = _previous_cycles.get(machine_id)
+    if prev:
+        all_same = True
+        for i in range(total_cp):
+            if (cp_start[i] != prev['start'][i] or
+                    cp_end[i] != prev['end'][i]):
+                all_same = False
+                break
+        if all_same:
+            return jsonify({
+                'status': 'duplicate',
+                'message': 'No change from previous cycle'
+            }), 202
+
+    # Save current cycle for future deduplication
+    _previous_cycles[machine_id] = {
+        'start': list(cp_start),
+        'end': list(cp_end),
+    }
+
+    # ── Reformat timestamps: "YYYY-MM-DD-HH:MM:SS" → "YYYY-MM-DD HH:MM:SS"
+    import re as _re
+    _ts_pattern = _re.compile(r'^(\d{4}-\d{2}-\d{2})-(\d{2}:\d{2}:\d{2})$')
+
+    def fix_ts(ts):
+        m = _ts_pattern.match(ts)
+        return f'{m.group(1)} {m.group(2)}' if m else ts
+
+    # ── Build and execute INSERT IGNORE ─────────────────────────────────
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            sql = """
+                INSERT IGNORE INTO checkpoints
+                    (machine_id, checkpoint_no, checkpoint_ok, checkpoint_not_ok,
+                     time_taken, start_time, end_time)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            rows_to_insert = []
+            for i in range(total_cp):
+                rows_to_insert.append((
+                    machine_id,
+                    i + 1,
+                    1 if cp_ok[i] else 0,
+                    1 if cp_nok[i] else 0,
+                    round(float(cp_time[i] or 0), 3),
+                    fix_ts(cp_start[i]),
+                    fix_ts(cp_end[i]),
+                ))
+            cur.executemany(sql, rows_to_insert)
+            inserted = cur.rowcount
+            conn.commit()
+        conn.close()
+
+        app.logger.info(
+            f'[Ingest] {machine_id}: inserted {inserted}/{total_cp} checkpoints'
+        )
+        return jsonify({
+            'status': 'success',
+            'rows_inserted': inserted,
+            'total_checkpoints': total_cp,
+        }), 200
+
+    except Exception as e:
+        app.logger.error(f'[Ingest] Error for {machine_id}: {e}')
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 
