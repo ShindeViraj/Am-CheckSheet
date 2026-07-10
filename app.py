@@ -614,18 +614,21 @@ def api_ingest_checkpoints():
             }), 202
 
     # ── Deduplication Check ─────────────────────────────────────────────
+    # ALL checkpoints must have BOTH start AND end changed from previous
+    # cycle. If even one checkpoint shares the same start OR end, reject.
     prev = _previous_cycles.get(machine_id)
-    if prev:
-        all_same = True
+    if prev and len(prev.get('start', [])) >= total_cp:
+        all_changed = True
         for i in range(total_cp):
-            if (cp_start[i] != prev['start'][i] or
-                    cp_end[i] != prev['end'][i]):
-                all_same = False
+            # A checkpoint is "changed" only if BOTH start AND end differ
+            if (cp_start[i] == prev['start'][i] or
+                    cp_end[i] == prev['end'][i]):
+                all_changed = False
                 break
-        if all_same:
+        if not all_changed:
             return jsonify({
                 'status': 'duplicate',
-                'message': 'No change from previous cycle'
+                'message': 'Not all checkpoints have new timestamps'
             }), 202
 
     # Save current cycle for future deduplication
@@ -641,6 +644,50 @@ def api_ingest_checkpoints():
     def fix_ts(ts):
         m = _ts_pattern.match(ts)
         return f'{m.group(1)} {m.group(2)}' if m else ts
+
+    # ── Shift Guard (1 entry per shift per machine) ────────────────────
+    # Shift A: 07:00–15:30 | Shift B: 15:30–00:00 | Shift C: 00:00–07:00
+    first_start = fix_ts(cp_start[0])
+    try:
+        from datetime import datetime as _dt
+        ts_parsed = _dt.strptime(first_start, '%Y-%m-%d %H:%M:%S')
+        hour_min = ts_parsed.hour * 60 + ts_parsed.minute  # minutes since midnight
+
+        if 420 <= hour_min < 930:       # 07:00 – 15:30
+            current_shift = 'A'
+        elif hour_min >= 930:            # 15:30 – 23:59
+            current_shift = 'B'
+        else:                            # 00:00 – 07:00
+            current_shift = 'C'
+
+        # Shift-adjusted date (shifts starting after midnight belong to previous day)
+        from datetime import timedelta as _td
+        shift_date = (ts_parsed - _td(hours=7)).strftime('%Y-%m-%d')
+
+        conn_shift = get_db()
+        with conn_shift.cursor() as cur_shift:
+            cur_shift.execute("""
+                SELECT COUNT(*) as cnt FROM checkpoints
+                WHERE machine_id = %s
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) = %s
+                  AND CASE
+                        WHEN TIME(start_time) >= '07:00:00' AND TIME(start_time) < '15:30:00' THEN 'A'
+                        WHEN TIME(start_time) >= '15:30:00' THEN 'B'
+                        ELSE 'C'
+                      END = %s
+            """, (machine_id, shift_date, current_shift))
+            row = cur_shift.fetchone()
+        conn_shift.close()
+
+        if row and row.get('cnt', 0) > 0:
+            return jsonify({
+                'status': 'shift_duplicate',
+                'message': f'Already logged for shift {current_shift} on {shift_date}'
+            }), 202
+
+    except ValueError:
+        # If timestamp parsing fails, skip the shift guard and proceed
+        app.logger.warning(f'[Ingest] Could not parse start_time for shift check: {first_start}')
 
     # ── Build and execute INSERT IGNORE ─────────────────────────────────
     try:
