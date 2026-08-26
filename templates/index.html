@@ -748,6 +748,9 @@ Requires immediate attention
                     if (data.worst_machine) {
                         const worstEl = document.getElementById('bannerWorst');
                         if (worstEl) worstEl.textContent = data.worst_machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
+                    } else {
+                        const worstEl = document.getElementById('bannerWorst');
+                        if (worstEl) worstEl.textContent = '-';
                     }
                     
                     const banner = document.getElementById('shiftSummaryBanner');
