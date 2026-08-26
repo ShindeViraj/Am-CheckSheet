@@ -857,9 +857,16 @@ Requires immediate attention
                     legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'rectRounded', padding: 16, font: { family: 'Inter', size: 12 } } },
                     tooltip: {
                         callbacks: {
-                            afterBody: function(items) {
+                        afterBody: function(items) {
                                 const idx = items[0].dataIndex;
-                                return 'Total: ' + data[idx].total + '  |  NOK Rate: ' + data[idx].nok_rate + '%';
+                                const datasetLabel = items[0].dataset.label;
+                                const total = data[idx].total;
+                                if (datasetLabel === 'OK') {
+                                    const okRate = total > 0 ? (100 - parseFloat(data[idx].nok_rate)).toFixed(1) : '0.0';
+                                    return 'Total: ' + total + '  |  OK Rate: ' + okRate + '%';
+                                } else {
+                                    return 'Total: ' + total + '  |  NOK Rate: ' + data[idx].nok_rate + '%';
+                                }
                             }
                         }
                     }
