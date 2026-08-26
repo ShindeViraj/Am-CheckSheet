@@ -141,7 +141,7 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
         mc = get_column_letter(_day_mark_col(day))
         tc = get_column_letter(_day_time_col(day))
         ws.column_dimensions[mc].width = 7.7   # ✓/✗ mark
-        ws.column_dimensions[tc].width = 8.2   # T(m) time
+        ws.column_dimensions[tc].width = 8.2   # T(s) time
 
     # ── Helper ──────────────────────────────────────────────────────────────
     def cell(r, c, val, font=FONT_14, align=center_wrap, fill=None, brd=thin_border):
@@ -212,7 +212,7 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
         cell(6, col, None, fill=hdr_fill, font=FONT_14B)
     for idx in range(1, len(dates_list) + 1):
         cell(6, _day_mark_col(idx), '✓/✗', font=FONT_14B, fill=hdr_fill)
-        cell(6, _day_time_col(idx), 'T(m)', font=FONT_14B, fill=time_fill)
+        cell(6, _day_time_col(idx), 'T(s)', font=FONT_14B, fill=time_fill)
     ws.row_dimensions[6].height = 54
 
     # ── Checkpoint rows (3 per checkpoint: Shift A / B / C) ─────────────────
