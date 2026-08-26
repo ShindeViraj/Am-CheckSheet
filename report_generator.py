@@ -307,11 +307,14 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
         mark_fill = shift_b if is_b else None
         cell(cp_row, _day_mark_col(day_idx), mark, font=FONT_14B, fill=mark_fill)
 
-        time_val = float(rec['time_taken']) if rec['time_taken'] else 0
-        if time_val > 0:
-            tm_fill = shift_b if is_b else time_fill
-            cell(cp_row, _day_time_col(day_idx), round(time_val, 1),
-                 font=FONT_14, fill=tm_fill)
+        raw_min = float(rec['time_taken']) if rec['time_taken'] else 0
+        # Values > 100 min are PLC errors — treat as 0
+        # Convert from minutes (DB) to seconds (report column header says "sec")
+        time_sec = 0.0 if raw_min > 100 else round(raw_min * 60, 1)
+        tm_fill = shift_b if is_b else time_fill
+        # Always write the cell (including 0) so report is never blank
+        cell(cp_row, _day_time_col(day_idx), time_sec,
+             font=FONT_14, fill=tm_fill)
 
         # track shift timing
         key = (day_idx, shift)
@@ -385,7 +388,9 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
 
             cell(s_row,     mc, start_str, font=FONT_14, fill=fill)
             cell(s_row + 1, mc, end_str,   font=FONT_14, fill=fill)
-            cell(s_row + 2, mc, round(diff_mins, 1), font=FONT_14, fill=fill)
+            # If diff > 100 min it's a PLC error — show 0
+            total_min = 0.0 if diff_mins > 100 else round(diff_mins, 1)
+            cell(s_row + 2, mc, total_min, font=FONT_14, fill=fill)
             cell(s_row + 3, mc, stats['ok'], font=FONT_14, fill=fill)
             cell(s_row + 4, mc, stats['nok'], font=FONT_14, fill=fill)
 

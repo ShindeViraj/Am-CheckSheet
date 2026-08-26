@@ -154,6 +154,161 @@
             }
         ]
     },
+    "11_HD -MIG Welding (2)": {
+        "title": "Autonomous Maintenance (Daily) Check List",
+        "line_name": "Line: HD",
+        "machine_name": "Machine Name: MIG Welding",
+        "types_text": "Type: Safety (S) Poka-Yoke (Q) Daily PM (M)",
+        "clit_text": "CLIT:  C-Cleaning   L-Lubrication  I-Inspection  T-Tightening",
+        "col_headers": [
+            "S.No.",
+            "SQM",
+            "Check Point",
+            "Check point photos",
+            "Time\n(sec)",
+            "Spec. Type (A/V)",
+            "CLIT",
+            "How",
+            "Shift"
+        ],
+        "checkpoints": [
+            {
+                "s_no": "1",
+                "sqm": "S/R",
+                "check_point": "Ensure the work zone is free from cotton waste, hand gloves, and welding wire.\n\nStandard: Work area shall be free from cotton waste and unwanted materials.",
+                "time": "20",
+                "spec": "A",
+                "clit": "C",
+                "how": ""
+            },
+            {
+                "s_no": "2",
+                "sqm": "R",
+                "check_point": "A) Clean and Lubricate LHS & RHS slide movement.\n\nStandard: Slides shall be free from dust and move smoothly.",
+                "time": "20",
+                "spec": "A",
+                "clit": "C&L",
+                "how": ""
+            },
+            {
+                "s_no": "3",
+                "sqm": "S/R",
+                "check_point": "Check and ensure the emergency switch is functioning properly.\n\nStandard: Emergency switch shall be functional and not loose.",
+                "time": "10",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "4",
+                "sqm": "S/R",
+                "check_point": "Check two‑hand operation functioning (Anti‑Tie Down & Anti‑Repeat system).\n\nStandard: Two‑hand system shall be tightened and working properly.",
+                "time": "20",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "5",
+                "sqm": "S/R",
+                "check_point": "Check safety sensor operation and ensure it is not loose.\n\nStandard: Safety sensor shall be tightened and functioning properly.",
+                "time": "20",
+                "spec": "A",
+                "clit": "I&T",
+                "how": ""
+            },
+            {
+                "s_no": "6",
+                "sqm": "S/R",
+                "check_point": "Check the safety door operation (up & down movement).\n\n\nStandard: Safety door shall be in proper working condition.",
+                "time": "10",
+                "spec": "A",
+                "clit": "I&T",
+                "how": ""
+            },
+            {
+                "s_no": "7",
+                "sqm": "R",
+                "check_point": "Check the condition of all push buttons on the operating panel.\n\nStandard: Push buttons shall not be loose, broken, or missing and shall function correctly.",
+                "time": "20",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "8",
+                "sqm": "Q/R",
+                "check_point": "Check for any air leakage at tailstock clamping, valve bank, and safety door.\n\nStandard: If leakage is identified, raise a tag and mention the tag number.",
+                "time": "20",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "9",
+                "sqm": "R",
+                "check_point": "Check the torch condition.\n\nStandard:Torch shall have no looseness, leakage, burn marks",
+                "time": "20",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "10",
+                "sqm": "R",
+                "check_point": "Check the availability of CO₂ gas and verify flow rate.\n\nStandard: Gas flow shall be between 25–30 LPM.",
+                "time": "20",
+                "spec": "V",
+                "clit": "C&T",
+                "how": ""
+            },
+            {
+                "s_no": "11",
+                "sqm": "R",
+                "check_point": "Check and clean the feeder roller and gear condition.\n\nStandard: Feeder roller and gears shall be clean and free from damage.",
+                "time": "20",
+                "spec": "A",
+                "clit": "I&T",
+                "how": ""
+            },
+            {
+                "s_no": "12",
+                "sqm": "Q/R",
+                "check_point": "Check and verify the calibration due date of air pressure gauge and CO₂ pressure gauge.\n\nStandard: Calibration sticker shall be available and valid.",
+                "time": "10",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "13",
+                "sqm": "S/R",
+                "check_point": "Check the proper working of the fume exhauster.\n\nStandard: Fume exhauster shall be operational",
+                "time": "10",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "14",
+                "sqm": "S/R",
+                "check_point": "Ensure all electrical panels are in closed condition.\n\nStandard: Electrical panel doors shall remain closed at all times.",
+                "time": "10",
+                "spec": "A",
+                "clit": "I",
+                "how": ""
+            },
+            {
+                "s_no": "15",
+                "sqm": "5S",
+                "check_point": "Make sure Deep Cleanig Activity, 5S Activity happening once in a week (Clean of Machine Surrounding)\n\nStandard- All Machine should be dust free, Leakage free, Clean without Finger Prints",
+                "time": "25 MIN",
+                "spec": "",
+                "clit": "C",
+                "how": ""
+            }
+        ]
+    },
     "18_Z101 - Robo Welding (2)": {
         "title": "Autonomous Maintenance (Daily) Check List",
         "line_name": "Line: Z101",
