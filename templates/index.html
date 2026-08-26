@@ -46,6 +46,42 @@
             backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(229, 231, 235, 0.8);
         }
+        /* Dark mode */
+        html.dark body { background-color: #0f1117; color: #e2e8f0; }
+        html.dark .premium-card { background: #1a1d27; border-color: rgba(255,255,255,0.08); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.4); }
+        html.dark .premium-card:hover { border-color: rgba(0,88,190,0.4); }
+        html.dark .header-glass { background: rgba(15,17,23,0.95); border-bottom-color: rgba(255,255,255,0.08); }
+        html.dark aside { background: #0d0f18 !important; }
+        html.dark #recentTable thead tr { border-color: rgba(255,255,255,0.1); }
+        html.dark #recentTable tbody tr { border-color: rgba(255,255,255,0.05); }
+        html.dark #recentTable tbody tr:hover { background: rgba(255,255,255,0.03); }
+        html.dark .bg-gray-50\/50 { background: rgba(255,255,255,0.03) !important; }
+        html.dark .border-gray-100 { border-color: rgba(255,255,255,0.08) !important; }
+        html.dark select, html.dark input[type=date], html.dark input[type=month] { background: #1a1d27; color: #e2e8f0; border-color: rgba(255,255,255,0.12); }
+        /* Animated counter */
+        .kpi-number { transition: all 0.1s; }
+        /* Loading spinner */
+        .chart-spinner { display: flex; align-items: center; justify-content: center; height: 100%; }
+        .spinner-ring { width: 40px; height: 40px; border: 3px solid rgba(0,88,190,0.15); border-top-color: #0058be; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Row color coding */
+        tr.row-ok { border-left: 3px solid #22c55e; }
+        tr.row-nok { border-left: 3px solid #ef4444; }
+        tr.row-ok:hover { background: rgba(34,197,94,0.04); }
+        tr.row-nok:hover { background: rgba(239,68,68,0.04); }
+        /* Print styles */
+        @media print {
+            aside, header .print\:hidden, #printBtn { display: none !important; }
+            main { margin-left: 0 !important; }
+            .premium-card { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+        }
+        /* Summary banner */
+        .shift-banner { background: linear-gradient(135deg, #0058be 0%, #004395 100%); }
+        /* Last updated */
+        #lastUpdated { font-size: 10px; color: #94a3b8; }
+        /* Machine status cards */
+        .machine-status-card { transition: all 0.2s; cursor: pointer; }
+        .machine-status-card:hover { transform: translateY(-2px); }
     </style>
 <script id="tailwind-config">
         tailwind.config = {
@@ -198,20 +234,42 @@
         <img src="/static/dana_logo.webp" class="h-20 object-contain p-2" alt="Dana Logo">
     </div>
     
-    <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center pointer-events-none">
+    <div class="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center pointer-events-none">
         <span class="font-headline-md text-[24px] font-black text-primary uppercase tracking-wider">DASHBOARD</span>
+        <span id="liveClock" class="text-[11px] font-mono text-on-surface-variant font-medium tracking-widest"></span>
     </div>
     
-    <div class="flex-1 flex items-center justify-end gap-lg">
-        <div class="hidden md:flex items-center gap-md">
-            <div class="flex items-center gap-sm bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
+    <div class="flex-1 flex items-center justify-end gap-sm">
+        <div class="hidden md:flex items-center gap-sm">
+            <div class="flex items-center gap-sm bg-white dark:bg-[#1a1d27] px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
                 <span class="material-symbols-outlined text-gray-400 text-[18px]">calendar_today</span>
                 <label for="dashboardDate" class="font-label-md text-gray-600 font-medium">Date:</label>
                 <input type="date" id="dashboardDate" class="form-control px-2 py-1 bg-transparent outline-none text-gray-800 font-medium" value="{{ today }}">
             </div>
         </div>
+        <!-- Print button -->
+        <button id="printBtn" onclick="window.print()" title="Print Dashboard" class="print:hidden p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-gray-500 text-[20px]">print</span>
+        </button>
+        <!-- Dark mode toggle -->
+        <button id="darkToggle" onclick="toggleDark()" title="Toggle Dark Mode" class="p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-gray-500 text-[20px]" id="darkIcon">dark_mode</span>
+        </button>
     </div>
 </header>
+<!-- Shift Summary Banner -->
+<div id="shiftSummaryBanner" class="shift-banner text-white px-lg py-2 flex items-center gap-lg text-[12px] font-medium overflow-x-auto" style="display:none !important;">
+    <span class="shrink-0 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span><span id="bannerDate">-</span></span>
+    <span class="text-white/40">|</span>
+    <span class="shrink-0">Shift A: <span id="bannerA" class="font-bold">-</span></span>
+    <span class="text-white/40">|</span>
+    <span class="shrink-0">Shift B: <span id="bannerB" class="font-bold">-</span></span>
+    <span class="text-white/40">|</span>
+    <span class="shrink-0">Shift C: <span id="bannerC" class="font-bold">-</span></span>
+    <span class="text-white/40">|</span>
+    <span class="shrink-0 flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-yellow-300">warning</span>Worst: <span id="bannerWorst" class="font-bold text-yellow-200">-</span></span>
+    <span class="ml-auto shrink-0" id="lastUpdated">-</span>
+</div>
 <!-- Page Content -->
 <div class="p-lg space-y-lg max-w-[1600px] mx-auto">
 {% if not focus %}
@@ -265,6 +323,7 @@
 <div class="flex items-baseline gap-sm">
 <span class="font-display-lg text-display-lg text-primary font-black" id="totalOk">-</span>
 <div id="okBadge" class="px-sm py-xs bg-green-50 text-green-700 rounded-full font-label-md text-[10px] uppercase">Optimal</div>
+<div id="okRateBadge" class="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-[11px] font-bold" style="display:none;"></div>
 </div>
 <div class="w-full bg-surface-container rounded-full h-1.5 mt-sm">
 <div id="successRateBar" class="bg-green-500 h-1.5 rounded-full transition-all" style="width: 0%"></div>
@@ -283,6 +342,7 @@
 <div class="flex items-baseline gap-sm">
 <span class="font-display-lg text-display-lg text-error font-black" id="totalNok">-</span>
 <div id="nokBadge" class="px-sm py-xs bg-error-container text-on-error-container rounded-full font-label-md text-[10px] uppercase" style="display:none;">Critical</div>
+<div id="nokRateBadge" class="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-[11px] font-bold" style="display:none;"></div>
 </div>
 <p id="nokWarning" class="text-[11px] text-on-error-container mt-xs flex items-center gap-1" style="display:none;">
 <span class="material-symbols-outlined text-[12px]" data-icon="warning">warning</span>
@@ -449,6 +509,66 @@ Requires immediate attention
     let monthlyChart = null;
     let failureChart = null;
 
+    // ── Animated counter ──────────────────────────────────────────────────
+    function animateCount(elId, target) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const start = parseInt(el.innerText.replace(/,/g, '')) || 0;
+        const duration = 600;
+        const startTime = performance.now();
+        function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            const current = Math.round(start + (target - start) * eased);
+            el.innerText = current.toLocaleString();
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    // ── Last updated ──────────────────────────────────────────────────────
+    function updateLastUpdated() {
+        const el = document.getElementById('lastUpdated');
+        if (el) el.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    }
+
+    // ── Live clock ────────────────────────────────────────────────────────
+    function startClock() {
+        const el = document.getElementById('liveClock');
+        if (!el) return;
+        function tick() {
+            el.textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        tick();
+        setInterval(tick, 1000);
+    }
+    startClock();
+
+    // ── Dark mode ─────────────────────────────────────────────────────────
+    function toggleDark() {
+        const html = document.documentElement;
+        const icon = document.getElementById('darkIcon');
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            localStorage.setItem('tpm-theme', 'light');
+            if (icon) icon.textContent = 'dark_mode';
+        } else {
+            html.classList.add('dark');
+            localStorage.setItem('tpm-theme', 'dark');
+            if (icon) icon.textContent = 'light_mode';
+        }
+    }
+    // Restore saved theme
+    (function() {
+        const saved = localStorage.getItem('tpm-theme');
+        if (saved === 'dark') {
+            document.documentElement.classList.add('dark');
+            const icon = document.getElementById('darkIcon');
+            if (icon) icon.textContent = 'light_mode';
+        }
+    })();
+
     function initializeDashboardMachineMenu() {
         const toggle = document.getElementById('dashboardMachineToggle');
         const menu = document.getElementById('dashboardMachineMenu');
@@ -537,9 +657,9 @@ Requires immediate attention
             .then(res => {
                 if (res.status === 'success') {
                     const data = res.data;
-                    document.getElementById('totalChecks').innerText = data.summary.total;
-                    document.getElementById('totalOk').innerText = data.summary.ok;
-                    document.getElementById('totalNok').innerText = data.summary.nok;
+                    animateCount('totalChecks', data.summary.total);
+                    animateCount('totalOk', data.summary.ok);
+                    animateCount('totalNok', data.summary.nok);
                     
                     // Trend logic
                     const trend = data.summary.trend;
@@ -581,6 +701,14 @@ Requires immediate attention
                     document.getElementById('successRateBar').style.width = rate + '%';
                     document.getElementById('successRateText').innerText = rate + '% Success Rate';
                     document.getElementById('okBadge').style.display = rate > 0 ? 'inline-block' : 'none';
+
+                    // OK/NOK rate badges
+                    const okRate = total > 0 ? ((ok / total) * 100).toFixed(1) : '0.0';
+                    const nokRate = total > 0 ? ((nok / total) * 100).toFixed(1) : '0.0';
+                    const okRateBadge = document.getElementById('okRateBadge');
+                    const nokRateBadge = document.getElementById('nokRateBadge');
+                    if (okRateBadge) { okRateBadge.textContent = `OK Rate: ${okRate}%`; okRateBadge.style.display = total > 0 ? 'inline-block' : 'none'; }
+                    if (nokRateBadge) { nokRateBadge.textContent = `NOK Rate: ${nokRate}%`; nokRateBadge.style.display = nok > 0 ? 'inline-block' : 'none'; }
                     
                     // Critical Alert Logic
                     if (nok > ok && nok > 0) {
@@ -590,6 +718,11 @@ Requires immediate attention
                         document.getElementById('nokBadge').style.display = 'none';
                         document.getElementById('nokWarning').style.display = 'none';
                     }
+
+                    // Update summary banner date
+                    const bannerDateEl = document.getElementById('bannerDate');
+                    if (bannerDateEl) bannerDateEl.textContent = date;
+                    updateLastUpdated();
 
                     updateChart(data.chart_data);
                     updateRecentTable(data.recent);
@@ -631,12 +764,23 @@ Requires immediate attention
         if (!tbody) return;
         
         tbody.innerHTML = '';
-        recent.forEach(r => {
+        if (!recent || recent.length === 0) {
             const tr = document.createElement('tr');
-            tr.className = "border-b border-outline-variant/30";
+            tr.innerHTML = `<td colspan="4" class="p-8 text-center text-on-surface-variant">
+                <span class="material-symbols-outlined text-[40px] block mb-2 opacity-30">inbox</span>
+                <span class="text-sm">No recent checkpoints for this period</span>
+            </td>`;
+            tbody.appendChild(tr);
+            return;
+        }
+        
+        recent.forEach(r => {
+            const isOk = r.checkpoint_ok == 1;
+            const tr = document.createElement('tr');
+            tr.className = `border-b border-outline-variant/30 transition-colors ${isOk ? 'row-ok' : 'row-nok'}`;
             
             const td1 = document.createElement('td');
-            td1.className = "p-2 font-body-md w-[20%] text-gray-800 font-medium";
+            td1.className = "p-2 pl-3 font-body-md w-[20%] text-gray-800 font-medium";
             td1.textContent = r.machine_id;
             
             const td2 = document.createElement('td');
@@ -650,17 +794,16 @@ Requires immediate attention
             const td4 = document.createElement('td');
             td4.className = "p-2 w-[10%] text-right";
             const span = document.createElement('span');
-            span.className = r.checkpoint_ok == 1
+            span.className = isOk
                 ? 'px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold shadow-sm'
                 : 'px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold shadow-sm';
-            span.textContent = r.checkpoint_ok == 1 ? 'OK' : 'NOK';
+            span.textContent = isOk ? 'OK' : 'NOK';
             td4.appendChild(span);
             
             tr.appendChild(td1);
             tr.appendChild(td2);
             tr.appendChild(td3);
             tr.appendChild(td4);
-            
             tbody.appendChild(tr);
         });
     }
@@ -814,6 +957,34 @@ Requires immediate attention
                     if (document.getElementById('shiftChart')) renderShiftChart(res.shift_data);
                     if (document.getElementById('monthlyChart')) renderMonthlyChart(res.monthly_data);
                     if (document.getElementById('failureChart')) renderFailureChart(res.failure_data);
+
+                    // Update shift summary banner
+                    if (res.shift_data && res.shift_data.length > 0) {
+                        const shiftMap = {};
+                        res.shift_data.forEach(s => { shiftMap[s.shift] = s; });
+                        ['A','B','C'].forEach(name => {
+                            const el = document.getElementById('banner' + name);
+                            if (!el) return;
+                            const s = shiftMap[name];
+                            if (s && s.total > 0) {
+                                const rate = (100 - parseFloat(s.nok_rate)).toFixed(1);
+                                el.textContent = rate + '% OK';
+                                el.style.color = parseFloat(s.nok_rate) > 10 ? '#fca5a5' : '#86efac';
+                            } else {
+                                el.textContent = 'No data';
+                                el.style.color = 'rgba(255,255,255,0.5)';
+                            }
+                        });
+                        // Worst machine from failure data
+                        if (res.failure_data && res.failure_data.length > 0) {
+                            const worst = res.failure_data[0];
+                            const worstEl = document.getElementById('bannerWorst');
+                            if (worstEl) worstEl.textContent = worst.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
+                        }
+                        const banner = document.getElementById('shiftSummaryBanner');
+                        if (banner) { banner.style.cssText = 'display: flex;'; }
+                    }
+                    updateLastUpdated();
                 }
             })
             .catch(err => console.error('Analytics fetch error:', err));
@@ -850,6 +1021,24 @@ Requires immediate attention
                     }
                 ]
             },
+            plugins: [{
+                id: 'shiftBarLabels',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        chart.getDatasetMeta(i).data.forEach((bar, j) => {
+                            const val = dataset.data[j];
+                            if (!val) return;
+                            ctx.save();
+                            ctx.fillStyle = '#374151';
+                            ctx.font = 'bold 11px Inter, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(val.toLocaleString(), bar.x, bar.y - 6);
+                            ctx.restore();
+                        });
+                    });
+                }
+            }],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -948,21 +1137,22 @@ Requires immediate attention
         }
 
         // Build labels
-        const labels = data.map(d => {
+        const labels = data.map((d, i) => {
             const machineName = d.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
+            const prefix = i === 0 ? '⚠ ' : '';
             
             if (isFocused) {
                 // Full description wrapped
                 // Only show description, we don't need machine name since it's already in the header
                 // But user requested "machine name - discription".
-                const fullText = machineName + ' - ' + (d.full_checkpoint || d.checkpoint);
+                const fullText = prefix + machineName + ' - ' + (d.full_checkpoint || d.checkpoint);
                 return wrapText(fullText, 60);
             } else {
                 // Short description truncated to prevent left-side cutoff in small chart
                 const cpText = d.checkpoint;
                 // If it's literally "Checkpoint #N", don't truncate it.
                 const cpShort = cpText.length > 25 && !cpText.startsWith('Checkpoint #') ? cpText.substring(0, 25) + '…' : cpText;
-                return machineName + ' - ' + cpShort;
+                return prefix + machineName + ' - ' + cpShort;
             }
         });
 
@@ -973,7 +1163,9 @@ Requires immediate attention
                 datasets: [{
                     label: 'NOK Count',
                     data: data.map(d => d.nok_count),
-                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    backgroundColor: data.map((d, i) => i === 0 ? 'rgba(185, 28, 28, 0.95)' : 'rgba(239, 68, 68, 0.8)'),
+                    borderColor: data.map((d, i) => i === 0 ? '#b91c1c' : 'transparent'),
+                    borderWidth: data.map((d, i) => i === 0 ? 2 : 0),
                     borderRadius: 4,
                     barPercentage: 0.7,
                 }]
@@ -989,6 +1181,12 @@ Requires immediate attention
                             title: function(items) {
                                 const idx = items[0].dataIndex;
                                 return data[idx].machine + '\n' + (data[idx].full_checkpoint || data[idx].checkpoint);
+                            },
+                            afterBody: function(items) {
+                                const idx = items[0].dataIndex;
+                                const total = data.reduce((s, d) => s + d.nok_count, 0);
+                                const pct = total > 0 ? ((data[idx].nok_count / total) * 100).toFixed(1) : 0;
+                                return `${pct}% of total failures`;
                             }
                         }
                     }
