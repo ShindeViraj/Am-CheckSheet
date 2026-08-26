@@ -724,9 +724,35 @@ Requires immediate attention
                         document.getElementById('nokWarning').style.display = 'none';
                     }
 
-                    // Update summary banner date
+                    // Update shift summary banner
                     const bannerDateEl = document.getElementById('bannerDate');
                     if (bannerDateEl) bannerDateEl.textContent = date;
+                    
+                    if (data.banner_shift_data) {
+                        ['A', 'B', 'C'].forEach(shift => {
+                            const el = document.getElementById('banner' + shift);
+                            if (!el) return;
+                            const s = data.banner_shift_data[shift];
+                            if (s && s.total > 0) {
+                                const nokRate = (s.nok / s.total) * 100;
+                                const okRate = (100 - nokRate).toFixed(1);
+                                el.textContent = okRate + '% OK';
+                                el.style.color = nokRate > 10 ? '#fca5a5' : '#86efac';
+                            } else {
+                                el.textContent = 'No data';
+                                el.style.color = 'rgba(255,255,255,0.5)';
+                            }
+                        });
+                    }
+                    
+                    if (data.worst_machine) {
+                        const worstEl = document.getElementById('bannerWorst');
+                        if (worstEl) worstEl.textContent = data.worst_machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
+                    }
+                    
+                    const banner = document.getElementById('shiftSummaryBanner');
+                    if (banner) banner.style.cssText = 'display: flex;';
+
                     updateLastUpdated();
 
                     updateChart(data.chart_data);
@@ -963,33 +989,6 @@ Requires immediate attention
                     if (document.getElementById('monthlyChart')) renderMonthlyChart(res.monthly_data);
                     if (document.getElementById('failureChart')) renderFailureChart(res.failure_data);
 
-                    // Update shift summary banner
-                    if (res.shift_data && res.shift_data.length > 0) {
-                        const shiftMap = {};
-                        res.shift_data.forEach(s => { shiftMap[s.shift] = s; });
-                        ['A','B','C'].forEach(name => {
-                            const el = document.getElementById('banner' + name);
-                            if (!el) return;
-                            const s = shiftMap[name];
-                            if (s && s.total > 0) {
-                                const rate = (100 - parseFloat(s.nok_rate)).toFixed(1);
-                                el.textContent = rate + '% OK';
-                                el.style.color = parseFloat(s.nok_rate) > 10 ? '#fca5a5' : '#86efac';
-                            } else {
-                                el.textContent = 'No data';
-                                el.style.color = 'rgba(255,255,255,0.5)';
-                            }
-                        });
-                        // Worst machine from failure data
-                        if (res.failure_data && res.failure_data.length > 0) {
-                            const worst = res.failure_data[0];
-                            const worstEl = document.getElementById('bannerWorst');
-                            if (worstEl) worstEl.textContent = worst.machine.replace(/^\d+_/, '').replace(/ \(\d+\)$/, '');
-                        }
-                        const banner = document.getElementById('shiftSummaryBanner');
-                        if (banner) { banner.style.cssText = 'display: flex;'; }
-                    }
-                    updateLastUpdated();
                 }
             })
             .catch(err => console.error('Analytics fetch error:', err));

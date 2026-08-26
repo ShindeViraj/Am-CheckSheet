@@ -159,6 +159,47 @@ def api_dashboard_summary():
             """, tuple(recent_params))
             recent = cur.fetchall()
 
+            # --- BANNER DATA ---
+            # Shift data for the current selection
+            cur.execute(f"""
+                SELECT
+                    CASE
+                        WHEN TIME(start_time) >= '07:00:00' AND TIME(start_time) < '15:30:00' THEN 'A'
+                        WHEN TIME(start_time) >= '15:30:00' THEN 'B'
+                        ELSE 'C'
+                    END as shift,
+                    SUM(checkpoint_ok) as ok,
+                    SUM(checkpoint_not_ok) as nok,
+                    COUNT(*) as total
+                FROM checkpoints
+                WHERE DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
+                  {machine_sql}
+                GROUP BY shift
+            """, tuple(params))
+            banner_shift_rows = cur.fetchall()
+            banner_shift_data = {}
+            for r in banner_shift_rows:
+                banner_shift_data[r['shift']] = {
+                    'shift': r['shift'],
+                    'ok': int(r['ok'] or 0),
+                    'nok': int(r['nok'] or 0),
+                    'total': int(r['total'] or 0)
+                }
+
+            # Worst machine for the current selection
+            cur.execute(f"""
+                SELECT machine_id, SUM(checkpoint_not_ok) as nok_count
+                FROM checkpoints
+                WHERE checkpoint_not_ok = 1
+                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
+                  {machine_sql}
+                GROUP BY machine_id
+                ORDER BY nok_count DESC
+                LIMIT 1
+            """, tuple(params))
+            worst_machine_row = cur.fetchone()
+            worst_machine = worst_machine_row['machine_id'] if worst_machine_row else ""
+
         conn.close()
 
         # Convert datetime objects and Decimal for JSON serialisation
@@ -200,6 +241,8 @@ def api_dashboard_summary():
                 },
                 'chart_data': chart_data,
                 'recent': recent,
+                'banner_shift_data': banner_shift_data,
+                'worst_machine': worst_machine
             }
         })
     except Exception as e:
