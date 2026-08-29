@@ -45,6 +45,22 @@ def machine_report():
 
 
 # ---------------------------------------------------------------------------
+# Build Exclusion List - last checkpoint per machine (Deep Cleaning)
+# ---------------------------------------------------------------------------
+import json as _json
+
+_DATA_FILE = os.path.join(os.path.dirname(__file__), 'storage', 'machine_data.json')
+with open(_DATA_FILE, 'r', encoding='utf-8') as _f:
+    _MACHINE_TEMPLATES = _json.load(_f)
+
+LAST_POINT_EXCLUSIONS = []
+for _key, _data in _MACHINE_TEMPLATES.items():
+    cps = _data.get('checkpoints', [])
+    if cps:
+        last_cp = cps[-1]
+        LAST_POINT_EXCLUSIONS.append((_key, str(last_cp['s_no'])))
+
+# ---------------------------------------------------------------------------
 # API – Dashboard
 # ---------------------------------------------------------------------------
 
@@ -186,17 +202,27 @@ def api_dashboard_summary():
                     'total': int(r['total'] or 0)
                 }
 
-            # Worst machine for the current selection
+            # Worst machine for the current selection (exclude last deep cleaning point)
+            exclusion_sql = ""
+            exclusion_params = []
+            if LAST_POINT_EXCLUSIONS:
+                clauses = []
+                for m_id, cp_no in LAST_POINT_EXCLUSIONS:
+                    clauses.append("(machine_id = %s AND checkpoint_no = %s)")
+                    exclusion_params.extend([m_id, cp_no])
+                exclusion_sql = " AND NOT (" + " OR ".join(clauses) + ")"
+
             cur.execute(f"""
                 SELECT machine_id, SUM(checkpoint_not_ok) as nok_count
                 FROM checkpoints
                 WHERE checkpoint_not_ok = 1
                   AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) >= %s AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) <= %s
                   {machine_sql}
+                  {exclusion_sql}
                 GROUP BY machine_id
                 ORDER BY nok_count DESC
                 LIMIT 1
-            """, tuple(params))
+            """, tuple(params + exclusion_params))
             worst_machine_row = cur.fetchone()
             worst_machine = worst_machine_row['machine_id'] if worst_machine_row else ""
 
@@ -250,22 +276,7 @@ def api_dashboard_summary():
         return jsonify({'status': 'error', 'message': 'An internal error occurred.'}), 500
 
 
-# ---------------------------------------------------------------------------
-# Build 5S exclusion list – last checkpoint per machine (SQM = "5S")
-# ---------------------------------------------------------------------------
-import json as _json
 
-_DATA_FILE = os.path.join(os.path.dirname(__file__), 'storage', 'machine_data.json')
-with open(_DATA_FILE, 'r', encoding='utf-8') as _f:
-    _MACHINE_TEMPLATES = _json.load(_f)
-
-FIVE_S_EXCLUSIONS = []   # list of (machine_id, checkpoint_no) tuples to exclude
-for _key, _data in _MACHINE_TEMPLATES.items():
-    cps = _data.get('checkpoints', [])
-    if cps:
-        last_cp = cps[-1]
-        if last_cp.get('sqm', '').upper() == '5S':
-            FIVE_S_EXCLUSIONS.append((_key, str(last_cp['s_no'])))
 
 
 # ---------------------------------------------------------------------------
@@ -379,14 +390,14 @@ def api_dashboard_analytics():
                 })
 
             # -----------------------------------------------------------
-            # 3. Point-wise failure ranking (exclude 5S last checkpoint)
+            # 3. Point-wise failure ranking (exclude deep cleaning last checkpoint)
             # -----------------------------------------------------------
             # Build exclusion WHERE clause
             exclusion_sql = ""
             exclusion_params = []
-            if FIVE_S_EXCLUSIONS:
+            if LAST_POINT_EXCLUSIONS:
                 clauses = []
-                for m_id, cp_no in FIVE_S_EXCLUSIONS:
+                for m_id, cp_no in LAST_POINT_EXCLUSIONS:
                     clauses.append("(machine_id = %s AND checkpoint_no = %s)")
                     exclusion_params.extend([m_id, cp_no])
                 exclusion_sql = " AND NOT (" + " OR ".join(clauses) + ")"
