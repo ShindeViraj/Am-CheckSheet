@@ -307,9 +307,21 @@ def generate_report(machine_id, month_str, checkpoints_data, start_date_str='202
         mark_fill = shift_b if is_b else None
         cell(cp_row, _day_mark_col(day_idx), mark, font=FONT_14B, fill=mark_fill)
 
-        raw_sec = float(rec['time_taken']) if rec['time_taken'] else 0
+        # Calculate time (seconds) from start_time / end_time
+        try:
+            st = rec['start_time']
+            et = rec['end_time']
+            if st and et:
+                diff_sec = (et - st).total_seconds()
+                # If start >= end (PLC error), treat as 1 second
+                time_sec = round(diff_sec, 1) if diff_sec > 0 else 1.0
+            else:
+                time_sec = 0.0
+        except (TypeError, AttributeError):
+            time_sec = 0.0
         # Values > 6000 sec (100 min) are PLC errors — treat as 0
-        time_sec = 0.0 if raw_sec > 6000 else round(raw_sec, 1)
+        if time_sec > 6000:
+            time_sec = 0.0
         tm_fill = shift_b if is_b else time_fill
         # Always write the cell (including 0) so report is never blank
         cell(cp_row, _day_time_col(day_idx), time_sec,
