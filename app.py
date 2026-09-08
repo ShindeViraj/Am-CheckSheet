@@ -778,14 +778,27 @@ def api_ingest_checkpoints():
             """
             rows_to_insert = []
             for i in range(total_cp):
+                st_str = fix_ts(cp_start[i])
+                et_str = fix_ts(cp_end[i])
+
+                # Calculate time_taken (seconds) from timestamps
+                try:
+                    st_dt = _dt.strptime(st_str, '%Y-%m-%d %H:%M:%S')
+                    et_dt = _dt.strptime(et_str, '%Y-%m-%d %H:%M:%S')
+                    diff_sec = (et_dt - st_dt).total_seconds()
+                    # If start >= end (PLC error), treat as 1 second
+                    time_sec = round(diff_sec, 3) if diff_sec > 0 else 1.0
+                except (ValueError, TypeError):
+                    time_sec = 1.0
+
                 rows_to_insert.append((
                     machine_id,
                     i + 1,
                     1 if cp_ok[i] else 0,
                     1 if cp_nok[i] else 0,
-                    round(float(cp_time[i] or 0), 3),
-                    fix_ts(cp_start[i]),
-                    fix_ts(cp_end[i]),
+                    time_sec,
+                    st_str,
+                    et_str,
                 ))
             cur.executemany(sql, rows_to_insert)
             inserted = cur.rowcount
