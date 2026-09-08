@@ -599,9 +599,6 @@ from dotenv import load_dotenv as _load_dotenv
 _load_dotenv()
 _INGEST_API_KEY = os.environ.get('INGEST_API_KEY', '')
 
-# In-memory deduplication store (mirrors Node-RED's flow.set/flow.get)
-# Resets on server restart — acceptable, same as Node-RED behaviour.
-_previous_cycles = {}
 
 
 @app.route('/api/ingest/checkpoints', methods=['POST'])
@@ -667,30 +664,6 @@ def api_ingest_checkpoints():
                 'message': f'Incomplete cycle — checkpoint {i + 1}/{total_cp} missing timestamp'
             }), 202
 
-    # ── Deduplication Check ─────────────────────────────────────────────
-    # ALL checkpoints must have BOTH start AND end changed from previous
-    # cycle. If even one checkpoint shares the same start OR end, reject.
-    prev = _previous_cycles.get(machine_id)
-    if prev and len(prev.get('start', [])) >= total_cp:
-        all_changed = True
-        for i in range(total_cp):
-            # A checkpoint is "changed" only if BOTH start AND end differ
-            if (cp_start[i] == prev['start'][i] or
-                    cp_end[i] == prev['end'][i]):
-                all_changed = False
-                break
-        if not all_changed:
-            return jsonify({
-                'status': 'duplicate',
-                'message': 'Not all checkpoints have new timestamps'
-            }), 202
-
-    # Save current cycle for future deduplication
-    _previous_cycles[machine_id] = {
-        'start': list(cp_start),
-        'end': list(cp_end),
-    }
-
     # ── Reformat timestamps: "YYYY-MM-DD-HH:MM:SS" → "YYYY-MM-DD HH:MM:SS"
     import re as _re
     _ts_pattern = _re.compile(r'^(\d{4}-\d{2}-\d{2})-(\d{2}:\d{2}:\d{2})$')
@@ -699,49 +672,99 @@ def api_ingest_checkpoints():
         m = _ts_pattern.match(ts)
         return f'{m.group(1)} {m.group(2)}' if m else ts
 
-    # ── Shift Guard (1 entry per shift per machine) ────────────────────
-    # Shift A: 07:00–15:30 | Shift B: 15:30–00:00 | Shift C: 00:00–07:00
-    first_start = fix_ts(cp_start[0])
+    # ── Database Deduplication Check ────────────────────────────────────
+    # Fetch the most recent cycle from the database for this machine.
+    # If even one checkpoint shares the same start OR end time with the DB, reject.
     try:
-        from datetime import datetime as _dt
-        ts_parsed = _dt.strptime(first_start, '%Y-%m-%d %H:%M:%S')
-        hour_min = ts_parsed.hour * 60 + ts_parsed.minute  # minutes since midnight
-
-        if 420 <= hour_min < 930:       # 07:00 – 15:30
-            current_shift = 'A'
-        elif hour_min >= 930:            # 15:30 – 23:59
-            current_shift = 'B'
-        else:                            # 00:00 – 07:00
-            current_shift = 'C'
-
-        # Shift-adjusted date (shifts starting after midnight belong to previous day)
-        from datetime import timedelta as _td
-        shift_date = (ts_parsed - _td(hours=7)).strftime('%Y-%m-%d')
-
-        conn_shift = get_db()
-        with conn_shift.cursor() as cur_shift:
-            cur_shift.execute("""
-                SELECT COUNT(*) as cnt FROM checkpoints
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT checkpoint_no, start_time, end_time
+                FROM checkpoints
                 WHERE machine_id = %s
-                  AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) = %s
-                  AND CASE
-                        WHEN TIME(start_time) >= '07:00:00' AND TIME(start_time) < '15:30:00' THEN 'A'
-                        WHEN TIME(start_time) >= '15:30:00' THEN 'B'
-                        ELSE 'C'
-                      END = %s
-            """, (machine_id, shift_date, current_shift))
-            row = cur_shift.fetchone()
-        conn_shift.close()
+                ORDER BY id DESC
+                LIMIT %s
+            """, (machine_id, total_cp))
+            db_prev = cur.fetchall()
+        conn.close()
+        
+        if len(db_prev) == total_cp:
+            db_map = { r['checkpoint_no']: r for r in db_prev }
+            all_changed = True
+            for i in range(total_cp):
+                cp_n = i + 1
+                if cp_n in db_map:
+                    db_st = str(db_map[cp_n]['start_time'])
+                    db_et = str(db_map[cp_n]['end_time'])
+                    if (fix_ts(cp_start[i]) == db_st or fix_ts(cp_end[i]) == db_et):
+                        all_changed = False
+                        break
+            if not all_changed:
+                return jsonify({
+                    'status': 'duplicate',
+                    'message': 'Identical to previously loaded data in DB'
+                }), 202
+    except Exception as e:
+        app.logger.error(f'[Ingest] DB dedup error: {e}')
 
-        if row and row.get('cnt', 0) > 0:
-            return jsonify({
-                'status': 'shift_duplicate',
-                'message': f'Already logged for shift {current_shift} on {shift_date}'
-            }), 202
+    # ── Cross-Shift Validation ──────────────────────────────────────────
+    # Ensure ALL start and end timestamps belong to the exact same shift.
+    from datetime import datetime as _dt
+    from datetime import timedelta as _td
+    shift_set = set()
+    
+    for i in range(total_cp):
+        for ts_str in [cp_start[i], cp_end[i]]:
+            if not ts_str: continue
+            try:
+                ts_parsed = _dt.strptime(fix_ts(ts_str), '%Y-%m-%d %H:%M:%S')
+                hour_min = ts_parsed.hour * 60 + ts_parsed.minute
+                
+                if 420 <= hour_min < 930:
+                    shift_id = 'A'
+                elif hour_min >= 930:
+                    shift_id = 'B'
+                else:
+                    shift_id = 'C'
+                    
+                shift_date = (ts_parsed - _td(hours=7)).strftime('%Y-%m-%d')
+                shift_set.add(f"{shift_date}_{shift_id}")
+            except ValueError:
+                pass
+                
+    if len(shift_set) > 1:
+        return jsonify({
+            'status': 'cross_shift_error',
+            'message': 'Data crosses shift boundaries'
+        }), 202
 
-    except ValueError:
-        # If timestamp parsing fails, skip the shift guard and proceed
-        app.logger.warning(f'[Ingest] Could not parse start_time for shift check: {first_start}')
+    # ── Shift Guard (1 entry per shift per machine) ─────────────────
+    if len(shift_set) == 1:
+        single_shift = list(shift_set)[0]
+        shift_date, current_shift = single_shift.split('_')
+        try:
+            conn_shift = get_db()
+            with conn_shift.cursor() as cur_shift:
+                cur_shift.execute("""
+                    SELECT COUNT(*) as cnt FROM checkpoints
+                    WHERE machine_id = %s
+                      AND DATE(DATE_SUB(start_time, INTERVAL 7 HOUR)) = %s
+                      AND CASE
+                            WHEN TIME(start_time) >= '07:00:00' AND TIME(start_time) < '15:30:00' THEN 'A'
+                            WHEN TIME(start_time) >= '15:30:00' THEN 'B'
+                            ELSE 'C'
+                          END = %s
+                """, (machine_id, shift_date, current_shift))
+                row = cur_shift.fetchone()
+            conn_shift.close()
+            
+            if row and row.get('cnt', 0) > 0:
+                return jsonify({
+                    'status': 'shift_duplicate',
+                    'message': f'Already logged for shift {current_shift} on {shift_date}'
+                }), 202
+        except Exception as e:
+            app.logger.warning(f'[Ingest] Shift guard error: {e}')
 
     # ── Build and execute INSERT IGNORE ─────────────────────────────────
     try:
